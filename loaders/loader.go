@@ -9,6 +9,7 @@ import (
 
 	"github.com/gosuri/uiprogress"
 	"github.com/mitchellh/mapstructure"
+	"github.com/prometheus/common/log"
 )
 
 // ImportLoader ...
@@ -16,20 +17,26 @@ type ImportLoader interface {
 	Load() (map[string]interface{}, error)
 	Start() error
 	Finish() error
+	Describe() string
 	Create(reader io.Reader, sanitize bool) ImportLoader
 }
 
 // Loader ...
 type Loader struct {
-	File string
-	SpecificLoader ImportLoader
-	file  *os.File
-	read  int64
-	total int64
-	reader io.Reader
-	Bar    *uiprogress.Bar
+	File             string
+	SpecificLoader   ImportLoader
+	file             *os.File
+	read             int64
+	total            int64
+	reader           io.Reader
+	Bar              *uiprogress.Bar
 	SkipSanitization bool
 	ready            bool
+}
+
+// Describe ..
+func (l *Loader) Describe() string {
+	return l.SpecificLoader.Describe()
 }
 
 // GetProgress ..
@@ -50,8 +57,10 @@ func (l *Loader) UpdateProgress() {
 // Load ...
 func (l *Loader) Load() (map[string]interface{}, error) {
 	if !l.ready {
+		log.Debug("Not ready")
 		return nil, fmt.Errorf("Attempt to call Load() without calling Start()")
 	}
+	log.Debug("Load")
 	return l.SpecificLoader.Load()
 }
 

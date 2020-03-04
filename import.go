@@ -1,17 +1,20 @@
 package mongoimport
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
 	"sync"
 	"time"
+
 	// "context"
 
 	"github.com/gosuri/uiprogress"
 	"github.com/gosuri/uiprogress/util/strutil"
 	"github.com/romnnn/mongoimport/loaders"
 	"go.mongodb.org/mongo-driver/mongo"
+
 	// "go.mongodb.org/mongo-driver/mongo/options"
 	// "go.mongodb.org/mongo-driver/bson"
 	log "github.com/sirupsen/logrus"
@@ -19,7 +22,7 @@ import (
 
 // Import ...
 type Import struct {
-	Connection *MongoConnection
+	Connection   *MongoConnection
 	Data         []*Datasource
 	IgnoreErrors bool
 }
@@ -83,9 +86,9 @@ func (i Import) progressStatus(file string, collection string, length uint) func
 	}
 }
 
-func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan chan []ImportResult, dbClient *mongo.Client) {
+func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan chan []ImportResult, db *mongo.Database) {
 	defer wg.Done()
-	var wg2 sync.WaitGroup
+	var sourceWg sync.WaitGroup
 
 	ldrs := make([]*loaders.Loader, len(source.Files))
 	results := make([]ImportResult, len(source.Files))
@@ -110,35 +113,20 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 	}
 
 	updateFilter = source.UpdateFilter
-	log.Debug(updateFilter)
-
-	databaseName := i.Connection.DatabaseName
-	if source.DatabaseName != "" {
-		databaseName = source.DatabaseName
-	}
-	collection := dbClient.Database(databaseName).Collection(source.Collection)
-
-	// Empty collection if desired
-	if source.EmptyCollection {
-		log.Infof("Deleting all documents in collection %s", source.Collection)
-		err := emptyCollection(collection)
-		if err != nil {
-			log.Warnf("Failed to empty collection %s: %s", source.Collection, err.Error())
-		}
-	}
+	log.Debugf("Update filter is %v", updateFilter)
 
 	for li, f := range source.Files {
 		// Create a new loader for each file here
 		l, err := source.Loader.Create(f)
 		if err != nil {
-			log.Error(err)
+			log.Errorf("Skipping file %s because no loader could be created: %s", f, err.Error())
 			continue
 		}
 		ldrs[li] = l
 
-		wg2.Add(1)
+		sourceWg.Add(1)
 		go func(file string, loader *loaders.Loader, collection *mongo.Collection, batchSize int) {
-			defer wg2.Done()
+			defer sourceWg.Done()
 
 			start := time.Now()
 			result := ImportResult{
@@ -205,12 +193,12 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 				// Flush batch eventually
 				if batched == batchSize {
 					/*
-					if updateFilter != nil {
-						database.Collection(collection).UpdateMany(
-							context.Background(),
-							updateFilter(dumped), update, options.Update().SetUpsert(true),
-						)
-					}
+						if updateFilter != nil {
+							database.Collection(collection).UpdateMany(
+								context.Background(),
+								updateFilter(dumped), update, options.Update().SetUpsert(true),
+							)
+						}
 					*/
 					// database.Collection(collection).InsertMany(context.Background(), batch)
 					// filter := bson.D{{}}
@@ -229,7 +217,7 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 			loader.Finish()
 			result.Elapsed = time.Since(start)
 			resultsChan <- result
-		}(f, ldrs[li], collection, 100)
+		}(f, ldrs[li], db.Collection(source.Collection), 100)
 	}
 
 	go func() {
@@ -249,7 +237,7 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 		}
 	}()
 
-	wg2.Wait()
+	sourceWg.Wait()
 	close(updateChan)
 	// Collect results
 	for ri := range results {
@@ -258,9 +246,30 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 	resultChan <- results
 }
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func (i Import) databaseName(source *Datasource) (string, error) {
+	databaseName := i.Connection.DatabaseName
+	if source.DatabaseName != "" {
+		databaseName = source.DatabaseName
+	}
+	if databaseName != "" {
+		return databaseName, nil
+	}
+	return databaseName, errors.New("Missing database name")
+}
+
 // Start ...
 func (i Import) Start() (ImportResult, error) {
-	var wg sync.WaitGroup
+	var preWg sync.WaitGroup
+	var importWg sync.WaitGroup
 	uiprogress.Start()
 
 	results := make([][]ImportResult, len(i.Data))
@@ -277,12 +286,50 @@ func (i Import) Start() (ImportResult, error) {
 		return result, err
 	}
 
+	// Eventually empty collections
+	needEmpty := make(map[string][]string)
 	for _, source := range i.Data {
-		wg.Add(1)
-		go i.importSource(source, &wg, resultsChan, dbClient)
+		if source.EmptyCollection {
+			existingDatabases, willEmpty := needEmpty[source.Collection]
+			newDatabase, err := i.databaseName(source)
+			if err != nil {
+				return result, fmt.Errorf("Missing database name for collection %s (%s): %s", source.Collection, source.Loader.Describe(), err.Error())
+			}
+			if !willEmpty || !contains(existingDatabases, newDatabase) {
+				needEmpty[source.Collection] = append(existingDatabases, newDatabase)
+			}
+		}
+	}
+	for collectionName, collectionDatabases := range needEmpty {
+		for _, db := range collectionDatabases {
+			preWg.Add(1)
+			go func(db string, collectionName string) {
+				defer preWg.Done()
+				log.Infof("Deleting all documents in %s:%s", db, collectionName)
+				collection := dbClient.Database(db).Collection(collectionName)
+				err := emptyCollection(collection)
+				if err != nil {
+					log.Warnf("Failed to delete all documents in collection %s:%s: %s", db, collectionName, err.Error())
+				} else {
+					log.Infof("Successfully deleted all documents in collection %s:%s", db, collectionName)
+				}
+
+			}(db, collectionName)
+		}
 	}
 
-	wg.Wait()
+	// Wait for preprocessing to complete before starting to import
+	preWg.Wait()
+	for _, source := range i.Data {
+		importWg.Add(1)
+		db, err := i.databaseName(source)
+		if err != nil {
+			return result, err
+		}
+		go i.importSource(source, &importWg, resultsChan, dbClient.Database(db))
+	}
+
+	importWg.Wait()
 	uiprogress.Stop()
 	log.Info("Completed")
 	for ri := range results {

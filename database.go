@@ -1,9 +1,10 @@
 package mongoimport
 
 import (
+	"context"
 	"fmt"
 	"time"
-	"context"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -12,10 +13,10 @@ import (
 // MongoConnection ...
 type MongoConnection struct {
 	DatabaseName string
-	User string
-	Password string
-	Host string
-	Port int
+	User         string
+	Password     string
+	Host         string
+	Port         int
 }
 
 // Client ...
