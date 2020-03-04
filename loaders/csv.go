@@ -144,6 +144,7 @@ func (csvl CSVLoader) Create(reader io.Reader, skipSanitization bool) ImportLoad
 // Load ...
 func (csvl *CSVLoader) Load() (entry map[string]interface{}, err error) {
 	columnCount := len(csvl.columns)
+	log.Debugf("Columns: %v", csvl.columns)
 	cols := make(map[string]interface{}, columnCount)
 	record, err := csvl.csvReader.Read()
 	if err != nil {

@@ -1,4 +1,4 @@
-package main
+package examples
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func startMongoContainer() (testcontainers.Container, *mongoimport.MongoConnection, error) {
+// StartMongoContainer ...
+func StartMongoContainer() (testcontainers.Container, *mongoimport.MongoConnection, error) {
 	ctx := context.Background()
 	mongoPort, err := nat.NewPort("", "27017")
 	if err != nil {

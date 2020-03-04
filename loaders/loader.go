@@ -9,6 +9,7 @@ import (
 
 	"github.com/gosuri/uiprogress"
 	"github.com/mitchellh/mapstructure"
+	"github.com/prometheus/common/log"
 )
 
 // ImportLoader ...
@@ -56,8 +57,10 @@ func (l *Loader) UpdateProgress() {
 // Load ...
 func (l *Loader) Load() (map[string]interface{}, error) {
 	if !l.ready {
+		log.Debug("Not ready")
 		return nil, fmt.Errorf("Attempt to call Load() without calling Start()")
 	}
+	log.Debug("Load")
 	return l.SpecificLoader.Load()
 }
 

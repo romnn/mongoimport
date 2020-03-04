@@ -113,13 +113,13 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 	}
 
 	updateFilter = source.UpdateFilter
-	log.Debug(updateFilter)
+	log.Debugf("Update filter is %v", updateFilter)
 
 	for li, f := range source.Files {
 		// Create a new loader for each file here
 		l, err := source.Loader.Create(f)
 		if err != nil {
-			log.Error(err)
+			log.Errorf("Skipping file %s because no loader could be created: %s", f, err.Error())
 			continue
 		}
 		ldrs[li] = l
