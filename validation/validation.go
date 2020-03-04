@@ -51,13 +51,13 @@ func MongoSanitize(s string) string {
 	str := sanitize.BaseName(s)
 	str = strings.ToLower(str)
 	str = strings.TrimSpace(str)
-	return strings.Map(func (r rune) rune {
+	return strings.Map(func(r rune) rune {
 		switch r {
-			case ' ', '\t', '\n', '\r', '$', '.', 0: // Problematic with MongoDB
-				return '_'
-			case '/', ':', ';', '|', '-', ',', '#': // Prettier
-				return '_'
-			}
-			return r
+		case ' ', '\t', '\n', '\r', '$', '.', 0: // Problematic with MongoDB
+			return '_'
+		case '/', ':', ';', '|', '-', ',', '#': // Prettier
+			return '_'
+		}
+		return r
 	}, str)
 }

@@ -117,6 +117,11 @@ func (csvl *CSVLoader) Start() error {
 	return nil
 }
 
+// Describe ...
+func (csvl *CSVLoader) Describe() string {
+	return "CSV"
+}
+
 // Finish ...
 func (csvl *CSVLoader) Finish() error {
 	return nil

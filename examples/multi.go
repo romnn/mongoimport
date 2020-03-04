@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	"github.com/romnnn/mongoimport"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
@@ -19,8 +20,8 @@ func main() {
 	csvLoader := loaders.DefaultCSVLoader()
 	datasources := []*mongoimport.Datasource{
 		{
-			Sanitize:   true,
-			Files:      []string{
+			Sanitize: true,
+			Files: []string{
 				"/media/roman/SSD1/bpdata/eleta/data/live/live_jan19.csv",
 				"/media/roman/SSD1/bpdata/eleta/data/live/live_feb19.csv",
 			},

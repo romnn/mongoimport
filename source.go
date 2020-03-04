@@ -2,20 +2,19 @@ package mongoimport
 
 import (
 	"github.com/romnnn/mongoimport/loaders"
-	// "go.mongodb.org/mongo-driver/bson"
 )
 
 // Datasource ...
 type Datasource struct {
-	Files      []string
-	DatabaseName string
-	Collection string
-	Loader     loaders.Loader
-	PostLoad   PostLoadHook
-	PreDump    PreDumpHook
-	UpdateFilter UpdateFilterHook
+	Files           []string
+	DatabaseName    string
+	Collection      string
+	Loader          loaders.Loader
+	PostLoad        PostLoadHook
+	PreDump         PreDumpHook
+	UpdateFilter    UpdateFilterHook
 	EmptyCollection bool
-	Sanitize bool
+	Sanitize        bool
 }
 
 // PostLoadHook ...

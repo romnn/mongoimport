@@ -2,13 +2,11 @@ package main
 
 import (
 	"os"
-	// "strings"
 
 	"github.com/romnnn/mongoimport"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	// "go.mongodb.org/mongo-driver/bson"
 )
 
 var (
@@ -162,27 +160,15 @@ func main() {
 					csvLoader.Excel = c.Bool("excel")
 					csvLoader.Delimiter = loaders.ParseDelimiter(c.String("delimiter"), csvLoader.SkipParseHeader)
 
-					/*
-						Have:
-						- CSV files
-							- Loader mit Excel
-								- Live (10x files) same post load
-								- Planned (5x files) same post load
-							- Loader ohne excel
-								- Weather (5x files) same post load\
-						- XML files
-							- Lol
-					*/
-
 					datasources := []*mongoimport.Datasource{
 						{
-							Sanitize:   true,
-							Files:      []string{file, file},
-							Collection: "test",
-							Loader:     loaders.Loader{SpecificLoader: csvLoader},
+							Sanitize:        true,
+							Files:           []string{file, file},
+							Collection:      "test",
+							Loader:          loaders.Loader{SpecificLoader: csvLoader},
 							EmptyCollection: true,
 							PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-								return loaded, nil //bson.D{{"vielen", "dank"}}, nil
+								return loaded, nil
 							},
 						},
 					}
@@ -190,7 +176,7 @@ func main() {
 					i := mongoimport.Import{
 						IgnoreErrors: c.Bool("ignore-errors"),
 						Data:         datasources,
-						Connection:  parseMongoClient(c),
+						Connection:   parseMongoClient(c),
 					}
 
 					result, err := i.Start()

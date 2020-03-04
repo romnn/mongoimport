@@ -36,10 +36,10 @@ func parseCollectionName(c *cli.Context, filename string, sanitize bool) (string
 func parseMongoClient(cliCtx *cli.Context) *mongoimport.MongoConnection {
 	return &mongoimport.MongoConnection{
 		DatabaseName: cliCtx.String("db-database"),
-		User: cliCtx.String("db-user"),
-		Password: cliCtx.String("db-password"),
-		Host: cliCtx.String("db-host"),
-		Port: cliCtx.Int("db-port"),
+		User:         cliCtx.String("db-user"),
+		Password:     cliCtx.String("db-password"),
+		Host:         cliCtx.String("db-host"),
+		Port:         cliCtx.Int("db-port"),
 	}
 }
 
