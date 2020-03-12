@@ -1,0 +1,18 @@
+# Ignore all
+*
+
+# Unignore all with extensions
+!*.*
+
+# Unignore all dirs
+!*/
+
+# Unignore bazel files without extension
+!**/WORKSPACE
+!**/BUILD
+
+### Above combination will ignore all files without extension ###
+
+.DS_Store
+.vscode/
+.idea/
