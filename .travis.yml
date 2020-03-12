@@ -1,0 +1,27 @@
+dist: bionic
+language: go
+go:
+- 1.13.x
+- master
+- tip
+os:
+- linux
+- osx
+matrix:
+  allow_failures:
+  - go: tip
+  fast_finish: true
+install: true
+notifications:
+  email: false
+script:
+- env GO111MODULE=on go build -o mongoimport github.com/romnnn/mongoimport/cmd/mongoimport
+- env GO111MODULE=on go test -v -race
+deploy:
+  provider: releases
+  api_key:
+    secure: T8OdCbs9olMN5jD/GSgY+ZC3lghnniICp3PWk5YtCzwsUhY92cFz6LfPszrmkrXxyldCAgjxmH33m1Dbfa9KfDiM0dtHXv2VlnMTD5ll9YnGFGo4raU7fI47PknS5lUbZu6k/LsiOlqV43NJpK9FTJuk/FMftlJjuF/hbneCqffWPQQTti/NCJ8SypCKOWyw5ZMwRYql8FkS8abkVUuQWYYbTow+TSGo6Wwy0F3ewrqasAhA+2kSvmYu2Vii8R+tcDE3c8nHpFtxjiqWiPsv79mhbJlUD/8szeoiqYYdeNYagwpT9/2CC8qJLv0k64KEfwGw+pDwZsW/St+iJonjjvEIdE4Fq5UHdqlNdN9fWEe5GtVzWNWm3g013gd8VbGBdGKHDC7AZgOXLJL0IaFz9n3F5nVkTGWAdq3eKyHZyay2vDMX8RLwZiJEP47htXGwmDYZ+pAnEe3N07jpzjOGJ3JAiig4UTP2m7G6zgTlRR70fNwtv7a/mNpOvu6hRSEVSJZE5bf5Lg4c9cCXCei4gK1mTpqV4W2wZhkQIf/YNAnbB9l3yTibXUZIW50wruLhrcySYu2JII4U+vGTNH+lde8CZ6y01XLHOuO+nji9+gSpJouLdI808x31LrSkV9mG3knklGYfYM5c6Xah17qFblWMSeg8xkBzkbzuQyAcLEA=
+  file: mongoimport
+  skip_cleanup: true
+  on:
+    tags: true
