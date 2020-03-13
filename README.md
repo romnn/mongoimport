@@ -10,7 +10,7 @@ CLI and go library for importing data from CSV, JSON or XML files into MongoDB.
 ```bash
 go run github.com/romnnn/mongoimport/cmd/mongoimport csv <path-to-csv>
 ```
-For linux, you can also download the pre built binary from [releases](https://github.com/romnnn/mongoimport/releases).
+You can also download pre built binaries from the [releases](https://github.com/romnnn/mongoimport/releases) page.
 
 For a list of options, run
 ```bash
