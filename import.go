@@ -96,21 +96,8 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 	updateChan := make(chan bool)
 
 	// Check for hooks
-	var postLoadHook PostLoadHook
-	var preDumpHook PreDumpHook
 	var updateFilter UpdateFilterHook
-
-	if source.PostLoad != nil {
-		postLoadHook = source.PostLoad
-	} else {
-		postLoadHook = defaultPostLoad
-	}
-
-	if source.PreDump != nil {
-		preDumpHook = source.PreDump
-	} else {
-		preDumpHook = defaultPreDump
-	}
+	postLoadHook, preDumpHook := source.getHooks()
 
 	updateFilter = source.UpdateFilter
 	log.Debugf("Update filter is %v", updateFilter)
@@ -220,22 +207,7 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 		}(f, ldrs[li], db.Collection(source.Collection), 100)
 	}
 
-	go func() {
-		for {
-			exit := false
-			select {
-			case <-updateChan:
-				exit = true
-			case <-time.After(100 * time.Millisecond):
-				for _, l := range ldrs {
-					l.UpdateProgress()
-				}
-			}
-			if exit {
-				break
-			}
-		}
-	}()
+	go updateUI(updateChan, ldrs)
 
 	sourceWg.Wait()
 	close(updateChan)
@@ -244,6 +216,23 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 		results[ri] = <-resultsChan
 	}
 	resultChan <- results
+}
+
+func updateUI(updateChan chan bool, ldrs []*loaders.Loader) {
+	for {
+		exit := false
+		select {
+		case <-updateChan:
+			exit = true
+		case <-time.After(100 * time.Millisecond):
+			for _, l := range ldrs {
+				l.UpdateProgress()
+			}
+		}
+		if exit {
+			break
+		}
+	}
 }
 
 func contains(s []string, e string) bool {

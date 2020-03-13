@@ -17,6 +17,25 @@ type Datasource struct {
 	Sanitize        bool
 }
 
+func (s Datasource) getHooks() (PostLoadHook, PreDumpHook) {
+	var postLoadHook PostLoadHook
+	var preDumpHook PreDumpHook
+
+	if s.PostLoad != nil {
+		postLoadHook = s.PostLoad
+	} else {
+		postLoadHook = defaultPostLoad
+	}
+
+	if s.PreDump != nil {
+		preDumpHook = s.PreDump
+	} else {
+		preDumpHook = defaultPreDump
+	}
+
+	return postLoadHook, preDumpHook
+}
+
 // PostLoadHook ...
 type PostLoadHook func(loaded map[string]interface{}) (interface{}, error)
 
