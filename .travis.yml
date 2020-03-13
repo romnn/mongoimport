@@ -21,7 +21,7 @@ script:
 
 - pip install -U pip && pip install pre-commit && pre-commit run --all-files
 - env GO111MODULE=on go build -o mongoimport github.com/romnnn/mongoimport/cmd/mongoimport
-- env GO111MODULE=on go test -v -race -coverprofile=coverage.txt -covermode=atomic
+- env GO111MODULE=on go test -v -race -coverprofile=coverage.txt -covermode=atomic github.com/romnnn/mongoimport/validation
 deploy:
   provider: releases
   api_key:
