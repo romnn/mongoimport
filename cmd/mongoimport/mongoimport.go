@@ -9,6 +9,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// Rev is set on build time to the git HEAD
+var Rev = ""
+
 var (
 	mongoConnectionOptions = []cli.Flag{
 		&cli.StringFlag{
