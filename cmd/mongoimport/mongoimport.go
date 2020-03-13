@@ -12,6 +12,9 @@ import (
 // Rev is set on build time to the git HEAD
 var Rev = ""
 
+// Version is incremented using bump2version
+const Version = "0.1.5"
+
 var (
 	mongoConnectionOptions = []cli.Flag{
 		&cli.StringFlag{
