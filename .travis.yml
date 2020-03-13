@@ -1,5 +1,8 @@
 dist: bionic
 language: go
+env:
+  - MOD=github.com/romnnn/mongoimport/cmd/mongoimport
+  - BINARY=mongoimport
 go:
   - 1.13.x
   - master
@@ -16,11 +19,18 @@ jobs:
       name: Publish release
       os: linux
       go: master
+      before_script:
+        - go get github.com/mitchellh/gox
+      script:
+        - gox -os="linux darwin windows" -arch="amd64" -output="mongoimport-${TRAVIS_TAG}-{{.OS}}-{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ${MOD}
       deploy:
         provider: releases
         token:
           secure: s2I0lwaJBucNYPtYQwDzhDM3OkoZjI4py6Wf1nnqiONeCoPCn/APe7nIoN1JGbERtFJtGmhfz1vgxntpy4wZ/x2Ofq+pFh0xSZRbLO3FlgFXArZ0KbldH/94hnCzrNOYuvK/3qIJlAHR0XBY7BgRTx0YrPRMKhvGfn0lMTh/epvzEtuh0A+kpu8R/d/fDOG4DYyMhcsOy7Jd4xLX0w2/+vGhKaq52bNwF9EIWhyods0V7pYPSFwqHRExCCJ5CxuxIAwm4ERnQxiIJLX4heHzdE1s3272RZndTl8QBudIf5sZPHtZ1Dhw8Q7IQMO8R5zmSS3M0BSPEnmmkOb1Tz5s8v3moZee9ft3jw5EGWfrt9TSaUWQg2bOoCup6ZqaJwzIpp3wm+l8CBbh6ModCJJB/K+Um21smRhq4RLTredxoWhbJtDXRMtWUnbtcgvpEy/y11Zq7J2e6Ma1HyVZd2JV1f1H1y3ka7BWHPasYmPYFFRMj1b3lXSL1+SRXF9HVNr3ear+4LRNKZeapLWBaElPLesEstPIyltErMgA0Ki22pT70PqCP6Mzw6ZqxvzZuJ1AgD13C+Z9WYK5NGrhbO03jhEveR9mFUMITs6Kpq1jK6pF5stR3mIDJXf3O7zgIFUAikAppv6kfSixE0hTojkDM3vac0lBLbVk3D6VeTSzGwM=
-        file: mongoimport
+        file:
+          - mongoimport-${TRAVIS_TAG}-windows-amd64.exe
+          - mongoimport-${TRAVIS_TAG}-darwin-amd64
+          - mongoimport-${TRAVIS_TAG}-linux-amd64
         skip_cleanup: true
         on:
           repo: romnnn/mongoimport
@@ -33,7 +43,7 @@ before_script:
   - go get github.com/fzipp/gocyclo
 script:
   - pip install -U pip && pip install pre-commit && pre-commit run --all-files
-  - env GO111MODULE=on go build -o mongoimport github.com/romnnn/mongoimport/cmd/mongoimport
+  - env GO111MODULE=on go build -o ${BINARY} ${MOD}
   - env GO111MODULE=on go test -v -race -coverprofile=coverage.txt -covermode=atomic
     github.com/romnnn/mongoimport/validation
 after_success:
