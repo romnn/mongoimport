@@ -42,7 +42,6 @@ before_script:
 script:
   - pip install -U pip && pip install pre-commit && pre-commit run --all-files
   - env GO111MODULE=on go build ${MOD}
-  - env GO111MODULE=on go test -v -race -coverprofile=coverage.txt -covermode=atomic
-    github.com/romnnn/mongoimport/validation
+  - env GO111MODULE=on go test -v -race -coverprofile=coverage.txt -coverpkg=all -covermode=atomic ./...
 after_success:
   - bash <(curl -s https://codecov.io/bash)
