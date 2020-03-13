@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -22,7 +21,6 @@ see https://docs.mongodb.com/manual/reference/limits/#Restriction-on-Collection-
 */
 func ValidCollectionName(name string) bool {
 	match, err := regexp.MatchString("^[_a-zA-Z][^$\x00]*$", name)
-	fmt.Println(strings.ToLower(name))
 	blacklisted, err := regexp.MatchString("^system.*$", strings.ToLower(name))
 	if err != nil {
 		return false
