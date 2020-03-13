@@ -13,7 +13,7 @@ import (
 var Rev = ""
 
 // Version is incremented using bump2version
-const Version = "0.1.5"
+const Version = "0.1.6"
 
 var (
 	mongoConnectionOptions = []cli.Flag{
