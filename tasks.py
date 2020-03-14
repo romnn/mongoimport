@@ -77,15 +77,13 @@ def pre_commit(c):
     c.run("pre-commit run --all-files")
 
 
-@task(
-    help=dict(
-        publish="Publish the coverage result to codecov.io (default False)",
-    ),
-)
+@task(help=dict(publish="Publish the coverage result to codecov.io (default False)",),)
 def coverage(c, publish=False):
     """Create coverage report
     """
-    c.run("env GO111MODULE=on go test -v -race -coverprofile=coverage.txt -coverpkg=all -covermode=atomic ./...")
+    c.run(
+        "env GO111MODULE=on go test -v -race -coverprofile=coverage.txt -coverpkg=all -covermode=atomic ./..."
+    )
     if publish:
         # Publish the results via codecov
         c.run("bash <(curl -s https://codecov.io/bash)")
@@ -96,7 +94,9 @@ def cc(c):
     """Build the project for all architectures
     """
     c.run(
-        'gox -os="linux darwin windows" -arch="amd64" -output="build/{{.Dir}}-{{.OS}}-{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose %s' % CMD_PKG)
+        'gox -os="linux darwin windows" -arch="amd64" -output="build/{{.Dir}}-{{.OS}}-{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose %s'
+        % CMD_PKG
+    )
 
 
 @task
@@ -111,8 +111,7 @@ def run(c):
     """Run the cmd target
     """
     options = sys.argv[3:]
-    c.run(
-        'go run {} {}'.format(CMD_PKG, " ".join(options)))
+    c.run("go run {} {}".format(CMD_PKG, " ".join(options)))
 
 
 @task
