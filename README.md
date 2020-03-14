@@ -33,7 +33,7 @@ For more examples, see `examples/`.
 
 All commits are automatically built and tested on [travis-ci.com](https://travis-ci.com/romnnn/mongoimport). In order to pass the required checks it is strongly recommended to install the repositories pre commit hooks (assuming you are in the repositories root):
 ```bash
-pip install pre-commit
+pip install pre-commit invoke bump2version
 pre-commit install
 ```
 
