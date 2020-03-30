@@ -1,91 +1,135 @@
 package mongoimport
 
 import (
-	"errors"
 	"fmt"
-	"io"
-	"path/filepath"
 	"sync"
 	"time"
 
-	// "context"
-
 	"github.com/gosuri/uiprogress"
-	"github.com/gosuri/uiprogress/util/strutil"
-	"github.com/romnnn/mongoimport/loaders"
+	"github.com/prometheus/common/log"
 	"go.mongodb.org/mongo-driver/mongo"
-
-	// "go.mongodb.org/mongo-driver/mongo/options"
-	// "go.mongodb.org/mongo-driver/bson"
-	log "github.com/sirupsen/logrus"
 )
+
+// "context"
+
+// "go.mongodb.org/mongo-driver/mongo/options"
+// "go.mongodb.org/mongo-driver/bson"
 
 // Import ...
 type Import struct {
-	Connection   *MongoConnection
-	Data         []*Datasource
-	IgnoreErrors bool
+	Connection            *MongoConnection
+	Sources               []*Datasource
+	IgnoreErrors          bool
+	MaxParallelism        int
+	InsertionBatchSize    int
+	dbClient              *mongo.Client
+	longestCollectionName string
+	longestDescription    string
 }
 
-// ImportResult ...
-type ImportResult struct {
-	File       string
-	Collection string
-	Succeeded  int
-	Failed     int
-	Elapsed    time.Duration
-	errors     []error
-}
+// Start ...
+func (i *Import) Start() (ImportResult, error) {
+	var preWg, workerWg sync.WaitGroup
+	var result ImportResult
+	var err error
 
-func byteCountSI(b int64) string {
-	const unit = 1000
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
+	start := time.Now()
+	i.dbClient, err = i.Connection.Client()
+	if err != nil {
+		return result, err
 	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB",
-		float64(b)/float64(div), "kMGTPE"[exp])
-}
 
-func (i Import) safePad() uint {
-	var maxTotal, maxFilename, maxCollection string
-	maxTotal = "589 GB" // Hardcoding seems sufficient
-	for _, s := range i.Data {
-		if len(s.Collection) > len(maxCollection) {
-			maxCollection = s.Collection
+	// Prepare sources
+	for _, source := range i.Sources {
+		if len(source.Collection) > len(i.longestCollectionName) {
+			i.longestCollectionName = source.Collection
 		}
-		for _, f := range s.Files {
-			if filename := filepath.Base(f); len(filename) > len(maxFilename) {
-				maxFilename = filename
+		if len(source.Description) > len(i.longestDescription) {
+			i.longestDescription = source.Description
+		}
+		source.prepareHooks()
+		source.bars = make(map[string]*uiprogress.Bar)
+		source.owner = i
+	}
+
+	// Eventually empty collections
+	needEmpty := make(map[string][]string)
+	for _, source := range i.Sources {
+
+		if source.EmptyCollection {
+			existingDatabases, willEmpty := needEmpty[source.Collection]
+			newDatabase, err := i.sourceDatabaseName(source)
+			if err != nil {
+				return result, fmt.Errorf("Missing database name for collection %s (%s): %s", source.Collection, source.Loader.Describe(), err.Error())
+			}
+			if !willEmpty || !contains(existingDatabases, newDatabase) {
+				needEmpty[source.Collection] = append(existingDatabases, newDatabase)
 			}
 		}
 	}
-	return uint(len(i.formattedProgressStatus(maxFilename, maxCollection, maxTotal, maxTotal)) + 5)
-}
+	for collectionName, collectionDatabases := range needEmpty {
+		for _, db := range collectionDatabases {
+			preWg.Add(1)
+			go func(db string, collectionName string) {
+				defer preWg.Done()
+				log.Infof("Deleting all documents in %s:%s", db, collectionName)
+				collection := i.dbClient.Database(db).Collection(collectionName)
+				err := emptyCollection(collection)
+				if err != nil {
+					log.Warnf("Failed to delete all documents in collection %s:%s: %s", db, collectionName, err.Error())
+				} else {
+					log.Infof("Successfully deleted all documents in collection %s:%s", db, collectionName)
+				}
 
-func (i Import) formattedProgressStatus(filename string, collection string, bytesDone string, bytesTotal string) string {
-	return fmt.Sprintf("[%s -> %s] %s/%s", filename, collection, bytesDone, bytesTotal)
-}
-
-func (i Import) formattedResult(result ImportResult) string {
-	filename := filepath.Base(result.File)
-	return fmt.Sprintf("[%s -> %s]: %d rows were imported successfully and %d failed in %s", filename, result.Collection, result.Succeeded, result.Failed, result.Elapsed)
-}
-
-func (i Import) progressStatus(file string, collection string, length uint) func(b *uiprogress.Bar) string {
-	return func(b *uiprogress.Bar) string {
-		filename := filepath.Base(file)
-		bytesDone := byteCountSI(int64(b.Current()))
-		bytesTotal := byteCountSI(int64(b.Total))
-		status := i.formattedProgressStatus(filename, collection, bytesDone, bytesTotal)
-		return strutil.Resize(status, length)
+			}(db, collectionName)
+		}
 	}
+
+	// Wait for preprocessing to complete before starting workers and producers
+	preWg.Wait()
+	jobChan := make(chan ImportJob)
+	resultsChan := make(chan PartialResult)
+	producerDoneChan := make(chan bool)
+
+	uiprogress.Start()
+	if err := i.produceJobs(jobChan); err != nil {
+		return result, err
+	}
+	if err := i.consumeJobs(&workerWg, jobChan, producerDoneChan, resultsChan); err != nil {
+		return result, err
+	}
+
+	// Collect results for each source
+	sourceResults := make([]SourceResult, len(i.Sources))
+	for partial := range resultsChan {
+		srcResult := &sourceResults[partial.Src]
+		src := i.Sources[partial.Src]
+		srcResult.Succeeded += partial.Succeeded
+		srcResult.Failed += partial.Failed
+		srcResult.Collection = src.Collection
+		srcResult.TotalFiles++
+		srcResult.Description = fmt.Sprintf("%d files", result.TotalFiles)
+		if src.IndividualProgress {
+			srcResult.PartialResults = append(srcResult.PartialResults, partial)
+		}
+	}
+
+	// Collect overall result
+	for _, srcRes := range sourceResults {
+		result.PartialResults = append(result.PartialResults, srcRes)
+		result.Succeeded += srcRes.Succeeded
+		result.Failed += srcRes.Failed
+		result.TotalFiles += srcRes.TotalFiles
+		result.TotalSources++
+	}
+
+	uiprogress.Stop()
+	log.Info("Completed")
+	result.Elapsed = time.Since(start)
+	return result, nil
 }
 
+/*
 func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan chan []ImportResult, db *mongo.Database) {
 	defer wg.Done()
 	var sourceWg sync.WaitGroup
@@ -179,14 +223,14 @@ func (i Import) importSource(source *Datasource, wg *sync.WaitGroup, resultChan 
 
 				// Flush batch eventually
 				if batched == batchSize {
-					/*
-						if updateFilter != nil {
-							database.Collection(collection).UpdateMany(
-								context.Background(),
-								updateFilter(dumped), update, options.Update().SetUpsert(true),
-							)
-						}
-					*/
+
+					// 	if updateFilter != nil {
+					// 		database.Collection(collection).UpdateMany(
+					// 			context.Background(),
+					// 			updateFilter(dumped), update, options.Update().SetUpsert(true),
+					// 		)
+					// 	}
+
 					// database.Collection(collection).InsertMany(context.Background(), batch)
 					// filter := bson.D{{}}
 					// update := batch // []interface{}
@@ -233,26 +277,6 @@ func updateUI(updateChan chan bool, ldrs []*loaders.Loader) {
 			break
 		}
 	}
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
-func (i Import) databaseName(source *Datasource) (string, error) {
-	databaseName := i.Connection.DatabaseName
-	if source.DatabaseName != "" {
-		databaseName = source.DatabaseName
-	}
-	if databaseName != "" {
-		return databaseName, nil
-	}
-	return databaseName, errors.New("Missing database name")
 }
 
 // Start ...
@@ -332,3 +356,4 @@ func (i Import) Start() (ImportResult, error) {
 	result.Elapsed = time.Since(start)
 	return result, nil
 }
+*/

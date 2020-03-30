@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/romnnn/mongoimport"
+	"github.com/romnnn/mongoimport/files"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -105,6 +108,20 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					setLogLevel(c)
+					batchSize := 3
+					f, err := os.Open("/media/roman/SSD1/bpdata/synfioo-data2/eleta_gps_2/HUPAC/")
+					if err != nil {
+						return err
+					}
+					for {
+						names, err := f.Readdirnames(batchSize)
+						if err != nil {
+							break
+						}
+						fmt.Println(names)
+						time.Sleep(1 * time.Second)
+					}
+					f.Close()
 					/*
 						cli.CommandHelpTemplate = strings.Replace(cli.CommandHelpTemplate, "[arguments...]", "<json-file>", -1)
 
@@ -123,8 +140,9 @@ func main() {
 				},
 			},
 			{
-				Name:  "csv",
-				Usage: "Import CSV into database",
+				Name:      "csv",
+				Usage:     "Import CSV into database",
+				ArgsUsage: "<csv-file>",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "excel",
@@ -156,7 +174,6 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					setLogLevel(c)
-					// cli.CommandHelpTemplate = strings.Replace(cli.CommandHelpTemplate, "[arguments...]", "<csv-file>", -1)
 					file, err := getFile(c)
 					csvLoader := loaders.DefaultCSVLoader()
 					csvLoader.SkipHeader = c.Bool("skip-header")
@@ -169,7 +186,7 @@ func main() {
 					datasources := []*mongoimport.Datasource{
 						{
 							Sanitize:        true,
-							Files:           []string{file, file},
+							FileProvider:    files.List{Files: []string{file}},
 							Collection:      "test",
 							Loader:          loaders.Loader{SpecificLoader: csvLoader},
 							EmptyCollection: true,
@@ -181,7 +198,7 @@ func main() {
 
 					i := mongoimport.Import{
 						IgnoreErrors: c.Bool("ignore-errors"),
-						Data:         datasources,
+						Sources:      datasources,
 						Connection:   parseMongoClient(c),
 					}
 
