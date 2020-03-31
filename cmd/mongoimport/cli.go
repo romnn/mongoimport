@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/romnnn/mongoimport"
+	"github.com/romnnn/mongoimport/files"
 	"github.com/romnnn/mongoimport/validation"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -52,29 +54,30 @@ func setLogLevel(c *cli.Context) {
 	log.SetLevel(level)
 }
 
-func getFile(c *cli.Context) (string, error) {
-	var file string
-	fileArg := c.Args().First()
-	fileOpt := c.String("file")
-	if fileArg == "" && fileOpt == "" {
-		return "", fmt.Errorf("Missing input file")
+func getDatabaseParameters(c *cli.Context) (string, string, error) {
+	if c.String("db-database") == "" {
+		return "", "", errors.New("Missing database name")
 	}
-	if fileArg != "" && fileExists(fileArg) {
-		file = fileArg
+	if c.String("collection") == "" {
+		return "", "", errors.New("Missing collection name")
 	}
-	if fileOpt != "" && fileExists(fileOpt) {
-		file = fileOpt
+	return c.String("db-database"), c.String("collection"), nil
+}
+
+func getFileProviders(c *cli.Context) ([]files.FileProvider, error) {
+	var providers []files.FileProvider
+	fileArgs := c.Args().Slice()
+	if len(fileArgs) < 1 {
+		return providers, fmt.Errorf("Missing input source")
 	}
-	if file == "" {
-		if fileArg != "" {
-			log.Errorf("%s does not exist", fileArg)
+	if c.Bool("glob") {
+		for _, pattern := range fileArgs {
+			providers = append(providers, &files.Glob{Pattern: pattern})
 		}
-		if fileOpt != "" {
-			log.Errorf("%s does not exist", fileOpt)
-		}
-		return "", fmt.Errorf("Missing input file")
+	} else {
+		providers = []files.FileProvider{&files.List{Files: fileArgs}}
 	}
-	return file, nil
+	return providers, nil
 }
 
 func fileExists(filename string) bool {

@@ -7,18 +7,21 @@ import (
 
 	"github.com/romnnn/mongoimport"
 	"github.com/romnnn/mongoimport/examples"
+	"github.com/romnnn/mongoimport/files"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	log.SetLevel(log.DebugLevel)
+	// log.SetLevel(log.DebugLevel)
 
 	// Get the files current directory
-	dir, err := os.Getwd() // filepath.Abs(filepath.Dir(os.Args[0]))
+	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Debug(dir)
 
 	// Start mongodb container
 	mongoC, conn, err := examples.StartMongoContainer()
@@ -31,40 +34,60 @@ func main() {
 	csvLoader.Excel = false
 	datasources := []*mongoimport.Datasource{
 		{
-			Files: []string{
+			Description: "Ford Escort Data",
+			FileProvider: &files.List{Files: []string{
 				filepath.Join(dir, "examples/data/ford_escort.csv"),
 				filepath.Join(dir, "examples/data/ford_escort2.csv"),
-			},
-			Collection: "ford_escorts",
-			Loader:     loaders.Loader{SpecificLoader: csvLoader},
-			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				log.Debug(loaded)
-				return loaded, nil
+			}},
+			Options: mongoimport.Options{
+				Collection: "ford_escorts",
 			},
 		},
 		{
-			Files: []string{
+			FileProvider: &files.List{Files: []string{
 				filepath.Join(dir, "examples/data/hurricanes.csv"),
+			}},
+			Options: mongoimport.Options{
+				Collection: "hurricanes",
 			},
-			Collection: "hurricanes",
-			Loader:     loaders.Loader{SpecificLoader: csvLoader},
-			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				log.Debug(loaded)
-				return loaded, nil
+		},
+		{
+			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
+			Options: mongoimport.Options{
+				Collection:         "globed",
+				IndividualProgress: mongoimport.Set(false),
+			},
+		},
+		{
+			Description:  "Walk Data",
+			FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data")},
+			Options: mongoimport.Options{
+				Collection:         "walked",
+				IndividualProgress: mongoimport.Set(false),
 			},
 		},
 	}
 
 	i := mongoimport.Import{
-		IgnoreErrors: true,
-		Data:         datasources,
-		Connection:   conn,
+		// Allow concurrent processing of at most 2 files with 2 threads
+		MaxParallelism: 2,
+		Sources:        datasources,
+		Connection:     conn,
+		// Global options
+		Options: mongoimport.Options{
+			IndividualProgress: mongoimport.Set(true),
+			Loader:             loaders.Loader{SpecificLoader: csvLoader},
+			FailOnErrors:       mongoimport.Set(false),
+			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
+				log.Debug(loaded)
+				return loaded, nil
+			},
+		},
 	}
 
 	result, err := i.Start()
 	if err != nil {
-		log.Info("Hi")
 		log.Fatal(err)
 	}
-	log.Infof("Total: %d rows were imported successfully and %d failed in %s", result.Succeeded, result.Failed, result.Elapsed)
+	log.Info(result.Summary())
 }

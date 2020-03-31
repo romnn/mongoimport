@@ -8,7 +8,7 @@
 CLI and go library for importing data from CSV, JSON or XML files into MongoDB.
 
 ```bash
-go run github.com/romnnn/mongoimport/cmd/mongoimport csv <path-to-csv>
+go run github.com/romnnn/mongoimport/cmd/mongoimport --db-user=root --db-password=example csv <path-to-csv-files>
 ```
 You can also download pre built binaries from the [releases](https://github.com/romnnn/mongoimport/releases) page.
 

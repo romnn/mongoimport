@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/romnnn/mongoimport"
@@ -34,7 +35,7 @@ var (
 		&cli.StringFlag{
 			Name:    "db-database",
 			Aliases: []string{"db", "name"},
-			Value:   "data",
+			Value:   "",
 			EnvVars: []string{"MONGODB_DATABASE_NAME", "MONGODB_NAME"},
 			Usage:   "mongodb database name",
 		},
@@ -60,9 +61,9 @@ var (
 			Usage: "use JSONB data type",
 		},
 		&cli.BoolFlag{
-			Name:  "ignore-errors",
-			Usage: "halt transaction on inconsistencies",
-			Value: true,
+			Name:  "fail-on-errors",
+			Usage: "halt transaction on inconsistencies or errors",
+			Value: false,
 		},
 		&cli.StringFlag{
 			Name:    "collection",
@@ -70,6 +71,31 @@ var (
 			Value:   "",
 			EnvVars: []string{"MONGODB_COLLECTION", "COLLECTION"},
 			Usage:   "name of collection to import into",
+		},
+		&cli.BoolFlag{
+			Name:    "empty",
+			Aliases: []string{"delete", "clear"},
+			Value:   false,
+			EnvVars: []string{"EMPTY_COLLECTION", "DELETE_COLLECTION"},
+			Usage:   "empty collection before insertion",
+		},
+		&cli.BoolFlag{
+			Name:    "sanitize",
+			Value:   true,
+			EnvVars: []string{"SANITIZE"},
+			Usage:   "sanitize field and collection names for compatibility with mongo",
+		},
+		&cli.IntFlag{
+			Name:    "parallelism",
+			Value:   0,
+			EnvVars: []string{"PARALELLISM", "THREADS"},
+			Usage:   "number of threads to use and files to keep open. Default (0) chooses the amount of logical CPU's available.",
+		},
+		&cli.IntFlag{
+			Name:    "insertion-batch-size",
+			Value:   100,
+			EnvVars: []string{"BATCH_SIZE", "INSERTION_BATCH_SIZE"},
+			Usage:   "number of entries to be inserted into the database as a single batch",
 		},
 	}
 
@@ -82,6 +108,12 @@ var (
 			Value:   "info",
 			Usage:   "log level (info|debug|warn|fatal|trace|error|panic)",
 		},
+		&cli.BoolFlag{
+			Name:    "glob",
+			Value:   false,
+			EnvVars: []string{"GLOB"},
+			Usage:   "glob input files",
+		},
 	}...)
 )
 
@@ -89,42 +121,22 @@ func main() {
 	app := &cli.App{
 		Name:  "mongoimport",
 		Usage: "Modular import for JSON, CSV or XML data into MongoDB",
-		Flags: append(allOptions, &cli.StringFlag{
-			Name:    "file",
-			Aliases: []string{"f"},
-			Usage:   "Load configuration from `FILE`",
-		}),
+		Flags: allOptions,
 		Commands: []*cli.Command{
 			{
-				Name:  "json",
-				Usage: "Import newline-delimited JSON objects into database",
-				Flags: []cli.Flag{
-					&cli.BoolFlag{Name: "serve", Aliases: []string{"s"}},
-					&cli.BoolFlag{Name: "option", Aliases: []string{"o"}},
-					&cli.StringFlag{Name: "message", Aliases: []string{"m"}},
-				},
+				Name:      "json",
+				ArgsUsage: "<json-files>",
+				Usage:     "Import newline-delimited JSON objects into database",
+				Flags:     []cli.Flag{},
 				Action: func(c *cli.Context) error {
 					setLogLevel(c)
-					/*
-						cli.CommandHelpTemplate = strings.Replace(cli.CommandHelpTemplate, "[arguments...]", "<json-file>", -1)
-
-						filename := c.Args().First()
-
-						ignoreErrors := c.GlobalBool("ignore-errors")
-						schema := c.GlobalString("schema")
-						tableName := parseTableName(c, filename)
-						dataType := getDataType(c)
-
-						connStr := parseConnStr(c)
-						err := importJSON(filename, connStr, schema, tableName, ignoreErrors, dataType)
-						return err
-					*/
-					return nil
+					return fmt.Errorf("JSON is not yet implemented")
 				},
 			},
 			{
-				Name:  "csv",
-				Usage: "Import CSV into database",
+				Name:      "csv",
+				Usage:     "Import CSV into database",
+				ArgsUsage: "<csv-files>",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "excel",
@@ -156,8 +168,14 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					setLogLevel(c)
-					// cli.CommandHelpTemplate = strings.Replace(cli.CommandHelpTemplate, "[arguments...]", "<csv-file>", -1)
-					file, err := getFile(c)
+					providers, err := getFileProviders(c)
+					if err != nil {
+						return err
+					}
+					database, collection, err := getDatabaseParameters(c)
+					if err != nil {
+						return err
+					}
 					csvLoader := loaders.DefaultCSVLoader()
 					csvLoader.SkipHeader = c.Bool("skip-header")
 					csvLoader.Fields = c.String("fields")
@@ -166,30 +184,48 @@ func main() {
 					csvLoader.Excel = c.Bool("excel")
 					csvLoader.Delimiter = loaders.ParseDelimiter(c.String("delimiter"), csvLoader.SkipParseHeader)
 
-					datasources := []*mongoimport.Datasource{
-						{
-							Sanitize:        true,
-							Files:           []string{file, file},
-							Collection:      "test",
-							Loader:          loaders.Loader{SpecificLoader: csvLoader},
-							EmptyCollection: true,
-							PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-								return loaded, nil
-							},
-						},
+					options := mongoimport.Options{
+						DatabaseName:       database,
+						Collection:         collection,
+						IndividualProgress: mongoimport.Set(true),
+						ShowCurrentFile:    mongoimport.Set(false),
+						Loader:             loaders.Loader{SpecificLoader: csvLoader},
+						// Hooks are ommitted
+						EmptyCollection:    mongoimport.Set(c.Bool("empty")),
+						Sanitize:           mongoimport.Set(c.Bool("sanitize")),
+						FailOnErrors:       mongoimport.Set(c.Bool("fail-on-errors")),
+						CollectErrors:      mongoimport.Set(true),
+						InsertionBatchSize: c.Int("insertion-batch-size"),
+					}
+
+					// Add datasources
+					var datasources []*mongoimport.Datasource
+					for _, provider := range providers {
+						datasources = append(datasources, &mongoimport.Datasource{
+							FileProvider: provider,
+						})
 					}
 
 					i := mongoimport.Import{
-						IgnoreErrors: c.Bool("ignore-errors"),
-						Data:         datasources,
-						Connection:   parseMongoClient(c),
+						Options:        options,
+						Sources:        datasources,
+						MaxParallelism: c.Int("parallelism"),
+						Connection:     parseMongoClient(c),
 					}
 
 					result, err := i.Start()
 					if err != nil {
 						log.Fatal(err)
 					}
-					log.Infof("Total: %d rows were imported successfully and %d failed in %s", result.Succeeded, result.Failed, result.Elapsed)
+					// Print errors
+					for _, srcResult := range result.PartialResults {
+						for _, partialResult := range srcResult.PartialResults {
+							for _, err := range partialResult.Errors {
+								log.Error(err)
+							}
+						}
+					}
+					log.Infof(result.Summary())
 
 					return err
 				},

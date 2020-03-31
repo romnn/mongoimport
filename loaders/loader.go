@@ -5,11 +5,8 @@ import (
 	"io"
 	"os"
 
-	"errors"
-
 	"github.com/gosuri/uiprogress"
 	"github.com/mitchellh/mapstructure"
-	"github.com/prometheus/common/log"
 )
 
 // ImportLoader ...
@@ -39,39 +36,12 @@ func (l *Loader) Describe() string {
 	return l.SpecificLoader.Describe()
 }
 
-// GetProgress ..
-func (l *Loader) GetProgress() (int64, int64) {
-	return l.read, l.total
-}
-
-// UpdateProgress ...
-func (l *Loader) UpdateProgress() {
-	done, total := l.GetProgress()
-	if l.Bar != nil {
-		l.Bar.Total = int(total)
-		l.Bar.Set(int(done))
-	}
-
-}
-
 // Load ...
 func (l *Loader) Load() (map[string]interface{}, error) {
 	if !l.ready {
-		log.Debug("Not ready")
 		return nil, fmt.Errorf("Attempt to call Load() without calling Start()")
 	}
-	log.Debug("Load")
 	return l.SpecificLoader.Load()
-}
-
-type test struct {
-	file string
-	read int64
-}
-
-func (l *Loader) Write(p []byte) (n int, err error) {
-	l.read = l.read + int64(len(p))
-	return n, nil
 }
 
 // Start ...
@@ -84,25 +54,12 @@ func (l *Loader) Start() error {
 }
 
 // Create ...
-func (l *Loader) Create(file string) (*Loader, error) {
-	// Open the file
-	f, fileErr := openFile(file)
-	if fileErr != nil {
-		return nil, fileErr
-	}
-
-	// Create the reader
-	stats, statErr := f.Stat()
-	if statErr == nil {
-		l.total = stats.Size()
-	}
+func (l *Loader) Create(file *os.File, updateHandler io.Writer) (*Loader, error) {
 	loader := &Loader{
-		File:             file,
 		SkipSanitization: l.SkipSanitization,
 		ready:            true,
-		total:            l.total,
 	}
-	reader := io.TeeReader(f, loader)
+	reader := io.TeeReader(file, updateHandler)
 	loader.SpecificLoader = l.SpecificLoader.Create(reader, l.SkipSanitization)
 	return loader, nil
 }
@@ -112,17 +69,6 @@ func (l *Loader) Finish() error {
 	err := l.SpecificLoader.Finish()
 	l.file.Close()
 	return err
-}
-
-func openFile(file string) (*os.File, error) {
-	if file == "" {
-		return nil, errors.New("Got invalid empty file path")
-	}
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	return f, nil
 }
 
 func (l Loader) createStruct(values map[string]interface{}, result interface{}) error {
