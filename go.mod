@@ -5,7 +5,6 @@ go 1.13
 require (
 	github.com/JensRantil/go-csv v0.0.0-20191126162552-aff1990e884a
 	github.com/docker/go-connections v0.4.0
-	github.com/fzipp/gocyclo v0.0.0-20150627053110-6acd4345c835 // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/imdario/mergo v0.3.9
@@ -21,5 +20,4 @@ require (
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527 // indirect
-	google.golang.org/appengine v1.1.0
 )
