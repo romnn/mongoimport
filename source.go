@@ -4,37 +4,24 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/gosuri/uiprogress"
 	"github.com/romnnn/mongoimport/files"
-	"github.com/romnnn/mongoimport/loaders"
 )
 
 // Datasource ...
 type Datasource struct {
-	Description        string
-	FileProvider       files.FileProvider
-	DatabaseName       string
-	Collection         string
-	IndividualProgress bool
-	ShowCurrentFile    bool
-	Loader             loaders.Loader
-	PostLoad           PostLoadHook
-	PreDump            PreDumpHook
-	UpdateFilter       UpdateFilterHook
-	EmptyCollection    bool
-	Sanitize           bool
-	InsertionBatchSize int
-	IgnoreErrors       bool
-	bars               map[string]*uiprogress.Bar
-	totalProgressBar   *uiprogress.Bar
-	owner              *Import
-	description        string
-	currentFile        string
-	totalFileCount     int64
-	doneFileCount      int64
-	result             SourceResult
+	Options
+	Description      string
+	FileProvider     files.FileProvider
+	bars             map[string]*uiprogress.Bar
+	totalProgressBar *uiprogress.Bar
+	owner            *Import
+	description      string
+	currentFile      string
+	totalFileCount   int64
+	doneFileCount    int64
+	result           SourceResult
 }
 
 type progressHandler struct {
@@ -54,14 +41,12 @@ func (ph progressHandler) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-var newProgressBarMux sync.Mutex
-
 // FileImportWillStart ...
 func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 	var handler progressHandler
 	var bar *uiprogress.Bar
-	newProgressBarMux.Lock()
-	if s.IndividualProgress {
+	s.owner.newProgressBarMux.Lock()
+	if Enabled(s.Options.IndividualProgress) {
 		// Create a new progress bar
 		filename := filepath.Base(file.Name())
 		bar = uiprogress.AddBar(10).AppendCompleted()
@@ -84,7 +69,7 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 					// If there is no description for this
 					s.totalFileCount = interimFileCount
 					s.updateDescription()
-					if s.ShowCurrentFile && len(interimLongestFilename) > len(s.owner.longestDescription) {
+					if Enabled(s.Options.ShowCurrentFile) && len(interimLongestFilename) > len(s.owner.longestDescription) {
 						go s.owner.updateLongestDescription(interimLongestFilename)
 					}
 				})
@@ -94,13 +79,13 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 		}
 	}
 	handler.bar = bar
-	newProgressBarMux.Unlock()
+	s.owner.newProgressBarMux.Unlock()
 	return handler
 }
 
 func (s *Datasource) fileImportDidComplete(file string) {
 	s.updateDescription()
-	if s.IndividualProgress {
+	if Enabled(s.Options.IndividualProgress) {
 		if bar, ok := s.bars[file]; ok {
 			// Mark the bar as completed and remove it's update handler
 			if bar != nil {
@@ -122,7 +107,7 @@ func (s *Datasource) prepareHooks() {
 }
 
 func (s *Datasource) updateDescription() {
-	if s.ShowCurrentFile {
+	if Enabled(s.Options.ShowCurrentFile) {
 		s.description = filepath.Base(filepath.Base(s.currentFile))
 	}
 	s.description = fmt.Sprintf("%d of %d", s.doneFileCount, s.totalFileCount)

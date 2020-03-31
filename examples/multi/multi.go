@@ -39,55 +39,50 @@ func main() {
 				filepath.Join(dir, "examples/data/ford_escort.csv"),
 				filepath.Join(dir, "examples/data/ford_escort2.csv"),
 			}},
-			Collection:         "ford_escorts",
-			IndividualProgress: true,
-			Loader:             loaders.Loader{SpecificLoader: csvLoader},
-			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				log.Debug(loaded)
-				return loaded, nil
+			Options: mongoimport.Options{
+				Collection: "ford_escorts",
 			},
 		},
 		{
 			FileProvider: &files.List{Files: []string{
 				filepath.Join(dir, "examples/data/hurricanes.csv"),
 			}},
-			Collection:         "hurricanes",
-			IndividualProgress: true,
-			Loader:             loaders.Loader{SpecificLoader: csvLoader},
-			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				log.Debug(loaded)
-				return loaded, nil
+			Options: mongoimport.Options{
+				Collection: "hurricanes",
 			},
 		},
 		{
-			FileProvider:       &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
-			Collection:         "globed",
-			IndividualProgress: false,
-			Loader:             loaders.Loader{SpecificLoader: csvLoader},
-			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				log.Debug(loaded)
-				return loaded, nil
+			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
+			Options: mongoimport.Options{
+				Collection:         "globed",
+				IndividualProgress: mongoimport.Set(false),
 			},
 		},
 		{
-			Description:        "Walk Data",
-			FileProvider:       &files.Walker{Directory: filepath.Join(dir, "examples/data")},
-			Collection:         "walked",
-			IndividualProgress: false,
-			Loader:             loaders.Loader{SpecificLoader: csvLoader},
-			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				log.Debug(loaded)
-				return loaded, nil
+			Description:  "Walk Data",
+			FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data")},
+			Options: mongoimport.Options{
+				Collection:         "walked",
+				IndividualProgress: mongoimport.Set(false),
 			},
 		},
 	}
 
 	i := mongoimport.Import{
-		IgnoreErrors: true,
-		// Allow concurrent processing of at most 2 files
+		// Allow concurrent processing of at most 2 files with 2 threads
 		MaxParallelism: 2,
 		Sources:        datasources,
 		Connection:     conn,
+		// Global options
+		Options: mongoimport.Options{
+			IndividualProgress: mongoimport.Set(true),
+			Loader:             loaders.Loader{SpecificLoader: csvLoader},
+			FailOnErrors:       mongoimport.Set(false),
+			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
+				log.Debug(loaded)
+				return loaded, nil
+			},
+		},
 	}
 
 	result, err := i.Start()

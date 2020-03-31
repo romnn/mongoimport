@@ -51,7 +51,7 @@ type PartialResult struct {
 	Succeeded  int
 	Failed     int
 	Elapsed    time.Duration
-	errors     []error
+	Errors     []error
 }
 
 // Summary ...

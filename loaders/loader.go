@@ -56,10 +56,8 @@ func (l *Loader) Start() error {
 // Create ...
 func (l *Loader) Create(file *os.File, updateHandler io.Writer) (*Loader, error) {
 	loader := &Loader{
-		// File:             file,
 		SkipSanitization: l.SkipSanitization,
 		ready:            true,
-		// total:            l.total,
 	}
 	reader := io.TeeReader(file, updateHandler)
 	loader.SpecificLoader = l.SpecificLoader.Create(reader, l.SkipSanitization)

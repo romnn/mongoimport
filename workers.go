@@ -20,7 +20,7 @@ type ImportJob struct {
 	Collection         *mongo.Collection
 }
 
-func (i Import) produceJobs(jobChan chan ImportJob) error {
+func (i *Import) produceJobs(jobChan chan ImportJob) error {
 	for _, s := range i.Sources {
 		err := s.FileProvider.Prepare()
 		if err != nil {
@@ -28,27 +28,25 @@ func (i Import) produceJobs(jobChan chan ImportJob) error {
 		}
 	}
 	go func() {
-		for {
-			done := true
-			produced := 0
-			for _, s := range i.Sources {
-				if produced > 2*i.MaxParallelism {
-					continue
-				}
+		for _, s := range i.Sources {
+			for {
 				file, err := s.FileProvider.NextFile()
+				partialResult := PartialResult{
+					File:       file,
+					Source:     s,
+					Collection: s.Collection,
+				}
 				if err == io.EOF {
 					// No-op (produced all files for this source)
+					break
 				} else if err != nil {
-					log.Warn(err)
+					partialResult.Errors = append(partialResult.Errors, err)
+					s.result.PartialResults = append(s.result.PartialResults, partialResult)
 				} else {
-					if file == "" {
-						panic(err)
-					}
-					done = false
-					ignoreErrors := i.IgnoreErrors
 					dbName, err := i.sourceDatabaseName(s)
 					if err != nil {
-						log.Warn(err)
+						partialResult.Errors = append(partialResult.Errors, err)
+						s.result.PartialResults = append(s.result.PartialResults, partialResult)
 						continue
 					}
 					db := i.dbClient.Database(dbName)
@@ -57,14 +55,12 @@ func (i Import) produceJobs(jobChan chan ImportJob) error {
 						Source:             s,
 						File:               file,
 						Loader:             &s.Loader,
-						IgnoreErrors:       ignoreErrors,
+						IgnoreErrors:       i.Options.Enabled(i.Options.FailOnErrors),
 						InsertionBatchSize: i.sourceBatchSize(s),
 						Collection:         collection,
 					}
+					log.Debugf("produced %s", file)
 				}
-			}
-			if done {
-				break
 			}
 		}
 		log.Debug("done producing jobs")
@@ -73,7 +69,7 @@ func (i Import) produceJobs(jobChan chan ImportJob) error {
 	return nil
 }
 
-func (i Import) consumeJobs(wg *sync.WaitGroup, jobChan <-chan ImportJob, producerDoneChan chan bool, resultsChan chan<- PartialResult) error {
+func (i *Import) consumeJobs(wg *sync.WaitGroup, jobChan <-chan ImportJob, producerDoneChan chan bool, resultsChan chan<- PartialResult) error {
 	for w := 1; w <= i.MaxParallelism; w++ {
 		wg.Add(1)
 		go worker(w, wg, jobChan, producerDoneChan, resultsChan)
@@ -85,8 +81,6 @@ func (i Import) consumeJobs(wg *sync.WaitGroup, jobChan <-chan ImportJob, produc
 	}()
 	return nil
 }
-
-var sourceDoneCountMux sync.Mutex
 
 func worker(id int, wg *sync.WaitGroup, jobChan <-chan ImportJob, producerDoneChan chan bool, resultsChan chan<- PartialResult) {
 	defer wg.Done()
@@ -113,7 +107,7 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 	file, err := openFile(job.File)
 	defer file.Close()
 	if err != nil {
-		result.errors = append(result.errors, err)
+		result.Errors = append(result.Errors, err)
 		return result
 	}
 
@@ -123,7 +117,7 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 	// Create a new loader for each file here
 	loader, err := job.Loader.Create(file, updateHandler)
 	if err != nil {
-		result.errors = append(result.errors, err)
+		result.Errors = append(result.Errors, err)
 		return result
 	}
 
@@ -140,8 +134,8 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 				exit = true
 			default:
 				result.Failed++
-				result.errors = append(result.errors, err)
-				if s.IgnoreErrors {
+				result.Errors = append(result.Errors, err)
+				if s.Options.Enabled(s.Options.FailOnErrors) {
 					log.Warnf(err.Error())
 					continue
 				} else {
@@ -156,7 +150,7 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 			err := insert(job.Collection, batch[:batched])
 			if err != nil {
 				log.Warn(err)
-				result.errors = append(result.errors, err)
+				result.Errors = append(result.Errors, err)
 			}
 			result.Succeeded += batched
 			break
@@ -201,7 +195,7 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 			err := insert(job.Collection, batch[:batched])
 			if err != nil {
 				log.Warn(err)
-				result.errors = append(result.errors, err)
+				result.Errors = append(result.Errors, err)
 			}
 			result.Succeeded += batched
 			batched = 0

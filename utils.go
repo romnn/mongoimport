@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/gosuri/uiprogress"
 	"github.com/gosuri/uiprogress/util/strutil"
@@ -35,11 +34,9 @@ func byteCountSI(b int64) string {
 		float64(b)/float64(div), "kMGTPE"[exp])
 }
 
-var updateLongestDescriptionMux sync.Mutex
-
 func (i *Import) updateLongestDescription(description string) {
-	updateLongestDescriptionMux.Lock()
-	defer updateLongestDescriptionMux.Unlock()
+	i.updateLongestDescriptionMux.Lock()
+	defer i.updateLongestDescriptionMux.Unlock()
 	if len(i.longestDescription) < len(description) {
 		i.longestDescription = description
 	}
@@ -63,7 +60,7 @@ func (i *Import) progressStatus(description *string, collection string) func(b *
 	}
 }
 
-func (i Import) sourceDatabaseName(source *Datasource) (string, error) {
+func (i *Import) sourceDatabaseName(source *Datasource) (string, error) {
 	databaseName := i.Connection.DatabaseName
 	if source.DatabaseName != "" {
 		databaseName = source.DatabaseName
@@ -74,7 +71,7 @@ func (i Import) sourceDatabaseName(source *Datasource) (string, error) {
 	return databaseName, errors.New("Missing database name")
 }
 
-func (i Import) sourceBatchSize(source *Datasource) int {
+func (i *Import) sourceBatchSize(source *Datasource) int {
 	batchSize := i.InsertionBatchSize
 	if source.InsertionBatchSize > 0 {
 		batchSize = source.InsertionBatchSize

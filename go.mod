@@ -8,6 +8,7 @@ require (
 	github.com/fzipp/gocyclo v0.0.0-20150627053110-6acd4345c835 // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/gosuri/uiprogress v0.0.1
+	github.com/imdario/mergo v0.3.9
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/mapstructure v1.1.2

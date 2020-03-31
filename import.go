@@ -2,6 +2,7 @@ package mongoimport
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -12,14 +13,15 @@ import (
 
 // Import ...
 type Import struct {
-	Connection            *MongoConnection
-	Sources               []*Datasource
-	IgnoreErrors          bool
-	MaxParallelism        int
-	InsertionBatchSize    int
-	dbClient              *mongo.Client
-	longestCollectionName string
-	longestDescription    string
+	Options
+	Connection                  *MongoConnection
+	Sources                     []*Datasource
+	MaxParallelism              int
+	dbClient                    *mongo.Client
+	longestCollectionName       string
+	longestDescription          string
+	newProgressBarMux           sync.Mutex
+	updateLongestDescriptionMux sync.Mutex
 }
 
 // Start ...
@@ -28,6 +30,11 @@ func (i *Import) Start() (ImportResult, error) {
 	var result ImportResult
 	var err error
 
+	if i.MaxParallelism < 1 {
+		i.MaxParallelism = runtime.NumCPU()
+	}
+	runtime.GOMAXPROCS(i.MaxParallelism)
+
 	i.dbClient, err = i.Connection.Client()
 	if err != nil {
 		return result, err
@@ -35,12 +42,16 @@ func (i *Import) Start() (ImportResult, error) {
 
 	// Prepare sources
 	for _, source := range i.Sources {
+		// Import options will be overridden with source options of higher precedence
+		source.Options = i.Options.OverriddenWith(source.Options)
+
 		if len(source.Collection) > len(i.longestCollectionName) {
 			i.longestCollectionName = source.Collection
 		}
 		if len(source.Description) > len(i.longestDescription) {
 			i.longestDescription = source.Description
 		}
+
 		source.prepareHooks()
 		source.bars = make(map[string]*uiprogress.Bar)
 		source.owner = i
@@ -49,8 +60,7 @@ func (i *Import) Start() (ImportResult, error) {
 	// Eventually empty collections
 	needEmpty := make(map[string][]string)
 	for _, source := range i.Sources {
-
-		if source.EmptyCollection {
+		if source.Options.Enabled(source.Options.EmptyCollection) {
 			existingDatabases, willEmpty := needEmpty[source.Collection]
 			newDatabase, err := i.sourceDatabaseName(source)
 			if err != nil {
@@ -81,7 +91,7 @@ func (i *Import) Start() (ImportResult, error) {
 
 	// Wait for preprocessing to complete before starting workers and producers
 	preWg.Wait()
-	jobChan := make(chan ImportJob)
+	jobChan := make(chan ImportJob, 2*i.MaxParallelism)
 	resultsChan := make(chan PartialResult)
 	producerDoneChan := make(chan bool)
 
@@ -105,7 +115,7 @@ func (i *Import) Start() (ImportResult, error) {
 		srcResult.Collection = partial.Source.Collection
 		srcResult.TotalFiles++
 		srcResult.Description = fmt.Sprintf("%d files", result.TotalFiles)
-		if partial.Source.IndividualProgress {
+		if Enabled(partial.Source.Options.IndividualProgress) || Enabled(i.Options.CollectErrors) {
 			srcResult.PartialResults = append(srcResult.PartialResults, partial)
 		}
 		// Add to total result
@@ -117,7 +127,6 @@ func (i *Import) Start() (ImportResult, error) {
 
 	result.TotalSources = len(i.Sources)
 	uiprogress.Stop()
-	log.Info("Completed")
 	result.Elapsed = time.Since(start)
 	return result, nil
 }
