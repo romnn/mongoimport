@@ -125,9 +125,9 @@ func (s *Datasource) updateDescription() {
 	if s.ShowCurrentFile {
 		s.description = filepath.Base(filepath.Base(s.currentFile))
 	}
-	s.description = fmt.Sprintf("%d files (%d done)", s.totalFileCount, s.doneFileCount)
+	s.description = fmt.Sprintf("%d of %d", s.doneFileCount, s.totalFileCount)
 	if s.Description != "" {
-		s.description = s.Description
+		s.description = fmt.Sprintf("%s (%s)", s.Description, s.description)
 	}
 	if len(s.description) > len(s.owner.longestDescription) {
 		go s.owner.updateLongestDescription(s.description)

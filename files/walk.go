@@ -87,10 +87,12 @@ func (provider *Walker) fetchDirMetadata(dir *os.File, totalFiles int64, totalSi
 			if err != nil {
 				continue
 			}
-			if fileInfo.IsDir() && provider.Recurse {
-				// Descent into the subdirectory upon the next batch
-				if subDir, err := os.Open(f); err == nil {
-					totalFiles, totalSize, longestFilename = provider.fetchDirMetadata(subDir, totalFiles, totalSize, longestFilename, updateHandler)
+			if fileInfo.IsDir() {
+				if provider.Recurse {
+					// Descent into the subdirectory upon the next batch
+					if subDir, err := os.Open(f); err == nil {
+						totalFiles, totalSize, longestFilename = provider.fetchDirMetadata(subDir, totalFiles, totalSize, longestFilename, updateHandler)
+					}
 				}
 			} else if include := provider.Handler(f, fileInfo, err); include {
 				totalFiles++
@@ -154,10 +156,12 @@ func (provider *Walker) nextBatch(currentFile *os.File) ([]string, error) {
 			log.Warn(err)
 			continue
 		}
-		if fileInfo.IsDir() && provider.Recurse {
-			// Descent into the subdirectory upon the next batch
-			if subDir, err := os.Open(f); err == nil {
-				provider.recFiles = append(provider.recFiles, subDir)
+		if fileInfo.IsDir() {
+			if provider.Recurse {
+				// Descent into the subdirectory upon the next batch
+				if subDir, err := os.Open(f); err == nil {
+					provider.recFiles = append(provider.recFiles, subDir)
+				}
 			}
 		} else if include := provider.Handler(f, fileInfo, err); include {
 			selectedFiles = append(selectedFiles, f)

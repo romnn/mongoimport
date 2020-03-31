@@ -1,15 +1,12 @@
 package files
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Glob ...
@@ -128,49 +125,7 @@ func (provider *Glob) Prepare() error {
 	return nil
 }
 
-/*
-func (provider *Glob) glob() error {
-	fmt.Printf("Glob pattern: %s\n", provider.pattern)
-	if !hasMeta(provider.pattern) {
-		if _, err := os.Lstat(provider.pattern); err != nil {
-			return nil
-		}
-		return nil
-	}
-
-	dir, file := filepath.Split(provider.pattern)
-	volumeLen := 0
-	if runtime.GOOS == "windows" {
-		volumeLen, dir = cleanGlobPathWindows(dir)
-	} else {
-		dir = cleanGlobPath(dir)
-	}
-	fmt.Printf("Glob dir=%s file=%s\n", dir, file)
-
-	if !hasMeta(dir[volumeLen:]) {
-		// Recent provider dir and pattern will be used for next batch
-		fmt.Printf("Globbing directly for dir=%s und pattern=%s\n", dir, file)
-		provider.dir, provider.pattern = dir, file
-		return nil
-	}
-
-	// Prevent infinite recursion. See issue 15879.
-	if dir == provider.pattern {
-		return filepath.ErrBadPattern
-	}
-
-	provider.pattern = dir
-	fmt.Printf("Globbing again on dir=%s\n", dir)
-	err := provider.glob()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-*/
-
 func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string) ([]string, error) {
-	fmt.Printf("Glob pattern: %s\n", pattern)
 	if !hasMeta(pattern) {
 		if _, err := os.Lstat(pattern); err != nil {
 			return nil, nil
@@ -185,10 +140,8 @@ func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string)
 	} else {
 		dir = cleanGlobPath(dir)
 	}
-	fmt.Printf("Glob dir=%s file=%s\n", dir, file)
 
 	if !hasMeta(dir[volumeLen:]) {
-		fmt.Printf("Globbing directly for dir=%s und pattern=%s\n", dir, file)
 		return provider.globDir(dir, file, depth, nil, matchesChan)
 	}
 
@@ -197,15 +150,12 @@ func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string)
 		return nil, filepath.ErrBadPattern
 	}
 
-	fmt.Printf("Globbing again on dir=%s\n", dir)
 	m, err := provider.glob(dir, depth+1, matchesChan)
-	fmt.Printf("Globing again yielded matches: %s\n", m)
 	if err != nil {
 		return nil, err
 	}
 	var matches []string
 	for _, d := range m {
-		fmt.Printf("Recursive glob on dir=%s and pattern=%s\n", d, file)
 		matches, err := provider.globDir(d, file, depth, matches, matchesChan)
 		if err != nil {
 			return matches, err
@@ -237,7 +187,6 @@ func (provider *Glob) globDir(dir, pattern string, depth int, matches []string, 
 
 		sort.Strings(names)
 		for _, n := range names {
-			fmt.Printf("%s vs %s\n", pattern, n)
 			matched, err := filepath.Match(pattern, n)
 			if err != nil {
 				return matches, err
@@ -246,7 +195,6 @@ func (provider *Glob) globDir(dir, pattern string, depth int, matches []string, 
 				match := filepath.Join(dir, n)
 				matches = append(matches, match)
 				if fileInfo, err := os.Lstat(match); err == nil && depth == 0 && !fileInfo.IsDir() {
-					fmt.Printf("Adding %s to channel\n", match)
 					matchesChan <- match
 				}
 			}
@@ -288,120 +236,6 @@ func (provider *Glob) FetchDirMetadata(updateHandler MetadataUpdateHandler) {
 	}
 }
 
-func (provider *Glob) nextBatch(currentFile *os.File) (matches []string, err error) {
-	/*
-		if !hasMeta(provider.pattern) {
-			if _, err := os.Lstat(provider.pattern); err != nil {
-				return []string{}, nil
-			}
-			return []string{provider.pattern}, nil
-		}
-		if provider.BatchSize < 0 {
-			provider.BatchSize = -1
-		} else if provider.BatchSize == 0 {
-			// Do not allow zero batches
-			provider.BatchSize = defaulBatchSize
-		}
-		filenames, _ := currentFile.Readdirnames(provider.BatchSize)
-		filepaths := make([]string, len(filenames))
-		for fi, fn := range filenames {
-			filepaths[fi] = filepath.Join(currentFile.Name(), fn)
-		}
-		sort.Strings(filepaths)
-		if len(filepaths) < 1 {
-			currentFile.Close()
-			provider.recFiles = provider.recFiles[:len(provider.recFiles)-1]
-			if len(provider.recFiles) > 0 {
-				currentFile = provider.recFiles[len(provider.recFiles)-1]
-				return provider.nextBatch(currentFile)
-			}
-			return []string{}, io.EOF
-		}
-		for _, f := range filepaths {
-			fileInfo, err := os.Lstat(f)
-			if err != nil {
-				log.Warn(err)
-				continue
-			}
-			if fileInfo.IsDir() {
-				// Descent into the subdirectory upon the next batch
-				if subDir, err := os.Open(f); err == nil {
-					provider.recFiles = append(provider.recFiles, subDir)
-				}
-			}
-			fmt.Printf("%s vs %s\n", provider.pattern, f)
-			matched, err := filepath.Match(provider.pattern, f)
-			if err != nil {
-				log.Warn(err)
-				continue
-			}
-			if matched {
-				matches = append(matches, filepath.Join(provider.dir, f))
-			}
-		}
-		fmt.Printf("%s\n", matches)
-		return matches, nil
-	*/
-	return provider.findMatchesFromDir(provider.dir, provider.pattern)
-}
-
-func (provider *Glob) findMatchesFromDir(dir, pattern string) ([]string, error) {
-	var matches []string
-	if provider.BatchSize < 0 {
-		provider.BatchSize = -1
-	} else if provider.BatchSize == 0 {
-		// Do not allow zero batches
-		provider.BatchSize = defaulBatchSize
-	}
-	filenames, _ := provider.file.Readdirnames(provider.BatchSize)
-	filepaths := make([]string, len(filenames))
-	filepaths = filenames
-	/*
-		for fi, fn := range filenames {
-			filepaths[fi] = filepath.Join(provider.file.Name(), fn)
-		}
-	*/
-	sort.Strings(filepaths)
-	if len(filepaths) < 1 {
-		provider.file.Close()
-		// provider.recFiles = provider.recFiles[:len(provider.recFiles)-1]
-		// if len(provider.recFiles) > 0 {
-		// 	currentFile = provider.recFiles[len(provider.recFiles)-1]
-		// 	return provider.nextBatch(currentFile)
-		// }
-		return []string{}, io.EOF
-	}
-
-	for _, f := range filepaths {
-		/*
-			fileInfo, err := os.Lstat(f)
-			if err != nil {
-				log.Warn(err)
-				continue
-			}
-			if fileInfo.IsDir() {
-				continue
-				// Descent into the subdirectory upon the next batch
-				// if subDir, err := os.Open(f); err == nil {
-					// provider.recFiles = append(provider.recFiles, subDir)
-				// }
-				//
-			}
-		*/
-		fmt.Printf("%s vs %s\n", provider.pattern, f)
-		matched, err := filepath.Match(provider.pattern, f)
-		if err != nil {
-			log.Warn(err)
-			continue
-		}
-		if matched {
-			matches = append(matches, filepath.Join(provider.file.Name(), f))
-		}
-	}
-	fmt.Printf("%s\n", matches)
-	return matches, nil
-}
-
 // NextFile ...
 func (provider *Glob) NextFile() (string, error) {
 	file, ok := <-provider.matchesChan
@@ -409,31 +243,4 @@ func (provider *Glob) NextFile() (string, error) {
 		return "", io.EOF
 	}
 	return file, nil
-	/*
-		if provider.batchIndex >= len(provider.batch) {
-			// Load next batch
-			for {
-				// panic(fmt.Sprintf("%v (%s)", matches, provider.recFiles))
-				//if len(provider.recFiles) < 1 {
-				//	return "", io.EOF
-				//}
-				// currentFile := provider.recFiles[len(provider.recFiles)-1]
-				batch, err := provider.nextBatch(provider.file)
-				//
-				if err != nil {
-					return "", err
-				}
-				if len(batch) < 1 {
-					// Keep looking for a match until error or EOF
-					continue
-				}
-				panic(fmt.Sprintf("%v", batch))
-				provider.batch = batch
-				provider.batchIndex = 0
-			}
-		}
-		ret := provider.batch[provider.batchIndex]
-		provider.batchIndex++
-		return ret, nil
-	*/
 }

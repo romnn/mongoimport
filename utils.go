@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/gosuri/uiprogress"
@@ -53,16 +52,6 @@ func (i *Import) safeLength() uint {
 
 func (i *Import) formattedProgressStatus(description string, collection string, bytesDone string, bytesTotal string) string {
 	return fmt.Sprintf("[%s -> %s] %s/%s", description, collection, bytesDone, bytesTotal)
-}
-
-func (i Import) filenameOrSummary(files []string) string {
-	var filename string
-	if len(files) == 1 {
-		filename = filepath.Base(files[0])
-	} else if len(files) > 1 {
-		filename = fmt.Sprintf("[%d files]", len(files))
-	}
-	return filename
 }
 
 func (i *Import) progressStatus(description *string, collection string) func(b *uiprogress.Bar) string {

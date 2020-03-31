@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
 	"github.com/romnnn/mongoimport"
+	"github.com/romnnn/mongoimport/examples"
 	"github.com/romnnn/mongoimport/files"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
@@ -15,29 +17,24 @@ func main() {
 
 	// Get the files current directory
 	dir, err := os.Getwd()
-	// dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Debug(dir)
 
-	/* Start mongodb container
+	// Start mongodb container
 	mongoC, conn, err := examples.StartMongoContainer()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer mongoC.Terminate(context.Background())
-	*/
-
-	m, err := filepath.Glob(filepath.Join(dir, "examples/data/*/*nested*.csv"))
-	log.Info(m)
 
 	csvLoader := loaders.DefaultCSVLoader()
 	csvLoader.Excel = false
 	datasources := []*mongoimport.Datasource{
-
 		{
+			Description: "Ford Escort Data",
 			FileProvider: &files.List{Files: []string{
 				filepath.Join(dir, "examples/data/ford_escort.csv"),
 				filepath.Join(dir, "examples/data/ford_escort2.csv"),
@@ -46,7 +43,7 @@ func main() {
 			IndividualProgress: true,
 			Loader:             loaders.Loader{SpecificLoader: csvLoader},
 			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				// log.Debug(loaded)
+				log.Debug(loaded)
 				return loaded, nil
 			},
 		},
@@ -58,40 +55,39 @@ func main() {
 			IndividualProgress: true,
 			Loader:             loaders.Loader{SpecificLoader: csvLoader},
 			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				// log.Debug(loaded)
+				log.Debug(loaded)
 				return loaded, nil
 			},
 		},
 		{
-			// Description: "HupacData",
-			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/synfioo-data2/eleta_gps_2/HUPAC/"},
-			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data/predictions"},
-			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data"},
-			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data/bench"},
-			// FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data")},
-			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
-			Collection:   "hupac",
-			// IndividualProgress: true,
+			FileProvider:       &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
+			Collection:         "globed",
 			IndividualProgress: false,
 			Loader:             loaders.Loader{SpecificLoader: csvLoader},
 			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				// log.Debug(loaded)
+				log.Debug(loaded)
+				return loaded, nil
+			},
+		},
+		{
+			Description:        "Walk Data",
+			FileProvider:       &files.Walker{Directory: filepath.Join(dir, "examples/data")},
+			Collection:         "walked",
+			IndividualProgress: false,
+			Loader:             loaders.Loader{SpecificLoader: csvLoader},
+			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
+				log.Debug(loaded)
 				return loaded, nil
 			},
 		},
 	}
 
 	i := mongoimport.Import{
-		IgnoreErrors:   true,
-		MaxParallelism: 20,
+		IgnoreErrors: true,
+		// Allow concurrent processing of at most 2 files
+		MaxParallelism: 2,
 		Sources:        datasources,
-		Connection: &mongoimport.MongoConnection{
-			DatabaseName: "mock",
-			User:         "root",
-			Password:     "example",
-			Host:         "localhost",
-			Port:         27017,
-		},
+		Connection:     conn,
 	}
 
 	result, err := i.Start()
