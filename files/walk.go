@@ -155,7 +155,6 @@ func (provider *Walker) nextBatch(currentFile *os.File) ([]string, error) {
 			continue
 		}
 		if fileInfo.IsDir() {
-			// panic(fmt.Sprintf("%v is dir", fileInfo.Name()))
 			// Descent into the subdirectory upon the next batch
 			if subDir, err := os.Open(f); err == nil {
 				provider.recFiles = append(provider.recFiles, subDir)
@@ -164,7 +163,5 @@ func (provider *Walker) nextBatch(currentFile *os.File) ([]string, error) {
 			selectedFiles = append(selectedFiles, f)
 		}
 	}
-	// panic(fmt.Sprintf("%v", selectedFiles))
-	// fmt.Printf("\n\n%v\n\n", selectedFiles)
 	return selectedFiles, nil
 }

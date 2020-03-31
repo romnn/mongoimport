@@ -52,12 +52,12 @@ func setLogLevel(c *cli.Context) {
 	log.SetLevel(level)
 }
 
-func getFile(c *cli.Context) (string, error) {
+func getFiles(c *cli.Context) ([]string, error) {
 	var file string
 	fileArg := c.Args().First()
 	fileOpt := c.String("file")
 	if fileArg == "" && fileOpt == "" {
-		return "", fmt.Errorf("Missing input file")
+		return []string{}, fmt.Errorf("Missing input file")
 	}
 	if fileArg != "" && fileExists(fileArg) {
 		file = fileArg
@@ -72,9 +72,9 @@ func getFile(c *cli.Context) (string, error) {
 		if fileOpt != "" {
 			log.Errorf("%s does not exist", fileOpt)
 		}
-		return "", fmt.Errorf("Missing input file")
+		return []string{}, fmt.Errorf("Missing input file")
 	}
-	return file, nil
+	return []string{file}, nil
 }
 
 func fileExists(filename string) bool {

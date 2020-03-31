@@ -36,9 +36,8 @@ func (i Import) produceJobs(jobChan chan ImportJob) error {
 					continue
 				}
 				file, err := s.FileProvider.NextFile()
-				// fmt.Printf("\nNext File: %s\n\n", file)
 				if err == io.EOF {
-					// Produced all files for this source
+					// No-op (produced all files for this source)
 				} else if err != nil {
 					log.Warn(err)
 				} else {
@@ -54,7 +53,6 @@ func (i Import) produceJobs(jobChan chan ImportJob) error {
 					}
 					db := i.dbClient.Database(dbName)
 					collection := db.Collection(s.Collection)
-					// log.Infof("Producing %s into %s", file, s.Collection)
 					jobChan <- ImportJob{
 						Source:             s,
 						File:               file,
@@ -69,7 +67,7 @@ func (i Import) produceJobs(jobChan chan ImportJob) error {
 				break
 			}
 		}
-		log.Debug("producer exited")
+		log.Debug("done producing jobs")
 		close(jobChan)
 	}()
 	return nil

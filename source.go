@@ -43,7 +43,6 @@ type progressHandler struct {
 
 func (ph progressHandler) Write(p []byte) (n int, err error) {
 	if ph.bar != nil {
-		// fmt.Printf("%d of %d\n", ph.bar.Current()+len(p), ph.bar.Total)
 		newValue := ph.bar.Current() + len(p)
 		if newValue > ph.bar.Total {
 			// The total length of the progress bar might be calculated in the background
@@ -55,17 +54,6 @@ func (ph progressHandler) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-// Might delete?
-func (s *Datasource) progressBarForFile(file *os.File) *uiprogress.Bar {
-	if s.IndividualProgress {
-		if bar, ok := s.bars[file.Name()]; ok {
-			return bar
-		}
-		return nil
-	}
-	return s.totalProgressBar
-}
-
 var newProgressBarMux sync.Mutex
 
 // FileImportWillStart ...
@@ -74,8 +62,7 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 	var bar *uiprogress.Bar
 	newProgressBarMux.Lock()
 	if s.IndividualProgress {
-		// Create a new progress bar for the import and return it's update handler
-		// Create progress bar
+		// Create a new progress bar
 		filename := filepath.Base(file.Name())
 		bar = uiprogress.AddBar(10).AppendCompleted()
 		bar.PrependFunc(s.owner.progressStatus(&filename, s.Collection))
@@ -112,13 +99,11 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 }
 
 func (s *Datasource) fileImportDidComplete(file string) {
-	// fmt.Printf("Is complete for: %s\n", file)
 	s.updateDescription()
 	if s.IndividualProgress {
 		if bar, ok := s.bars[file]; ok {
 			// Mark the bar as completed and remove it's update handler
 			if bar != nil {
-				// fmt.Printf("Set bar to 100 for: %s\n", file)
 				bar.Set(bar.Total)
 			}
 			delete(s.bars, file)

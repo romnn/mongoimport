@@ -36,23 +36,6 @@ func (l *Loader) Describe() string {
 	return l.SpecificLoader.Describe()
 }
 
-/*
-// GetProgress ..
-func (l *Loader) GetProgress() (int64, int64) {
-	return l.read, l.total
-}
-
-// UpdateProgress ...
-func (l *Loader) UpdateProgress() {
-	done, total := l.GetProgress()
-	if l.Bar != nil {
-		l.Bar.Total = int(total)
-		l.Bar.Set(int(done))
-	}
-
-}
-*/
-
 // Load ...
 func (l *Loader) Load() (map[string]interface{}, error) {
 	if !l.ready {

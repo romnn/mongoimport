@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/romnnn/mongoimport"
-	"github.com/romnnn/mongoimport/files"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -174,7 +173,7 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					setLogLevel(c)
-					file, err := getFile(c)
+					files, err := getFiles(c)
 					csvLoader := loaders.DefaultCSVLoader()
 					csvLoader.SkipHeader = c.Bool("skip-header")
 					csvLoader.Fields = c.String("fields")

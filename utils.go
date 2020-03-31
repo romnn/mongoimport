@@ -42,26 +42,12 @@ func (i *Import) updateLongestDescription(description string) {
 	updateLongestDescriptionMux.Lock()
 	defer updateLongestDescriptionMux.Unlock()
 	if len(i.longestDescription) < len(description) {
-		// Update progressbars
 		i.longestDescription = description
-		/*
-			for _, s := range i.Sources {
-				if s.IndividualProgress {
-					for file, bar := range s.bars {
-						// bar.
-						// bar.PrependFunc(i.progressStatus(filepath.Base(file), s.Collection, i.safePad()))
-					}
-				} else {
-					// s.totalProgressBar.PrependFunc(i.progressStatus(filepath.Base(s.description), s.Collection, i.safePad()))
-				}
-			}
-		*/
 	}
 }
 
 func (i *Import) safeLength() uint {
-	maxTotal := "589.9 TB" // Hardcoding seems sufficient
-	// fmt.Println(i.longestDescription, i.longestCollectionName, maxTotal, maxTotal)
+	maxTotal := "589.9 TB" // Hardcoding is sufficient
 	return uint(len(i.formattedProgressStatus(i.longestDescription, i.longestCollectionName, maxTotal, maxTotal)) + 5)
 }
 
