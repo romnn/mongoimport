@@ -16,12 +16,12 @@ type WalkerHandlerFunc func(path string, info os.FileInfo, err error) bool
 
 // Walker ...
 type Walker struct {
-	Directory   string
-	Handler     WalkerHandlerFunc
-	Recursively bool
-	BatchSize   int
-	batchIndex  int
-	batch       []string
+	Directory  string
+	Handler    WalkerHandlerFunc
+	Recurse    bool
+	BatchSize  int
+	batchIndex int
+	batch      []string
 	// When descending down a dir recursively, a number of files proportional to the maximum depth must be held open
 	// The depth first approach is preferred for most cases
 	recFiles []*os.File
@@ -87,7 +87,7 @@ func (provider *Walker) fetchDirMetadata(dir *os.File, totalFiles int64, totalSi
 			if err != nil {
 				continue
 			}
-			if fileInfo.IsDir() {
+			if fileInfo.IsDir() && provider.Recurse {
 				// Descent into the subdirectory upon the next batch
 				if subDir, err := os.Open(f); err == nil {
 					totalFiles, totalSize, longestFilename = provider.fetchDirMetadata(subDir, totalFiles, totalSize, longestFilename, updateHandler)
@@ -141,8 +141,8 @@ func (provider *Walker) nextBatch(currentFile *os.File) ([]string, error) {
 	if len(files) < 1 {
 		currentFile.Close()
 		provider.recFiles = provider.recFiles[:len(provider.recFiles)-1]
-		currentFile = provider.recFiles[len(provider.recFiles)-1]
 		if len(provider.recFiles) > 0 {
+			currentFile = provider.recFiles[len(provider.recFiles)-1]
 			return provider.nextBatch(currentFile)
 		}
 		return []string{}, io.EOF
@@ -154,7 +154,7 @@ func (provider *Walker) nextBatch(currentFile *os.File) ([]string, error) {
 			log.Warn(err)
 			continue
 		}
-		if fileInfo.IsDir() {
+		if fileInfo.IsDir() && provider.Recurse {
 			// Descent into the subdirectory upon the next batch
 			if subDir, err := os.Open(f); err == nil {
 				provider.recFiles = append(provider.recFiles, subDir)

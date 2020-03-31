@@ -30,6 +30,9 @@ func main() {
 	defer mongoC.Terminate(context.Background())
 	*/
 
+	m, err := filepath.Glob(filepath.Join(dir, "examples/data/*/*nested*.csv"))
+	log.Info(m)
+
 	csvLoader := loaders.DefaultCSVLoader()
 	csvLoader.Excel = false
 	datasources := []*mongoimport.Datasource{
@@ -65,7 +68,8 @@ func main() {
 			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data/predictions"},
 			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data"},
 			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data/bench"},
-			FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data")},
+			// FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data")},
+			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
 			Collection:   "hupac",
 			// IndividualProgress: true,
 			IndividualProgress: false,
