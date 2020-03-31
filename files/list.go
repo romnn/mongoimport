@@ -1,7 +1,7 @@
 package files
 
 import (
-	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -35,9 +35,10 @@ func (provider *List) FetchDirMetadata(updateHandler MetadataUpdateHandler) {
 
 // NextFile ...
 func (provider *List) NextFile() (string, error) {
-	if len(provider.Files) <= provider.index+1 {
-		return "", fmt.Errorf("No more files")
+	if provider.index >= len(provider.Files) {
+		return "", io.EOF
 	}
+	ret := provider.Files[provider.index]
 	provider.index++
-	return provider.Files[provider.index], nil
+	return ret, nil
 }

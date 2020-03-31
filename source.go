@@ -32,6 +32,9 @@ type Datasource struct {
 	owner              *Import
 	description        string
 	currentFile        string
+	totalFileCount     int64
+	doneFileCount      int64
+	result             SourceResult
 }
 
 type progressHandler struct {
@@ -41,7 +44,13 @@ type progressHandler struct {
 func (ph progressHandler) Write(p []byte) (n int, err error) {
 	if ph.bar != nil {
 		// fmt.Printf("%d of %d\n", ph.bar.Current()+len(p), ph.bar.Total)
-		ph.bar.Set(ph.bar.Current() + len(p))
+		newValue := ph.bar.Current() + len(p)
+		if newValue > ph.bar.Total {
+			// The total length of the progress bar might be calculated in the background
+			// In order to not miss any progress while the total calculation has to catch up, we increase the total to match
+			ph.bar.Total = newValue
+		}
+		ph.bar.Set(newValue)
 	}
 	return n, nil
 }
@@ -77,7 +86,7 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 		s.bars[file.Name()] = bar
 	} else {
 		if s.totalProgressBar == nil {
-			s.updateDescription(0)
+			s.updateDescription()
 			bar = uiprogress.AddBar(10).AppendCompleted()
 			bar.PrependFunc(s.owner.progressStatus(&s.description, s.Collection))
 			s.totalProgressBar = bar
@@ -86,7 +95,8 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 				s.FileProvider.FetchDirMetadata(func(interimFileCount int64, interimCombinedSize int64, interimLongestFilename string) {
 					s.totalProgressBar.Total = int(interimCombinedSize)
 					// If there is no description for this
-					s.updateDescription(interimFileCount)
+					s.totalFileCount = interimFileCount
+					s.updateDescription()
 					if s.ShowCurrentFile && len(interimLongestFilename) > len(s.owner.longestDescription) {
 						go s.owner.updateLongestDescription(interimLongestFilename)
 					}
@@ -101,13 +111,18 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 	return handler
 }
 
-func (s *Datasource) fileImportDidComplete(file *os.File) {
-	if bar, ok := s.bars[file.Name()]; ok {
-		// Mark the bar as completed and remove it's update handler
-		if bar != nil {
-			bar.Set(bar.Total)
+func (s *Datasource) fileImportDidComplete(file string) {
+	// fmt.Printf("Is complete for: %s\n", file)
+	s.updateDescription()
+	if s.IndividualProgress {
+		if bar, ok := s.bars[file]; ok {
+			// Mark the bar as completed and remove it's update handler
+			if bar != nil {
+				// fmt.Printf("Set bar to 100 for: %s\n", file)
+				bar.Set(bar.Total)
+			}
+			delete(s.bars, file)
 		}
-		delete(s.bars, file.Name())
 	}
 }
 
@@ -121,22 +136,16 @@ func (s *Datasource) prepareHooks() {
 	}
 }
 
-func (s *Datasource) updateDescription(fileCount int64) {
+func (s *Datasource) updateDescription() {
 	if s.ShowCurrentFile {
-		return
+		s.description = filepath.Base(filepath.Base(s.currentFile))
 	}
-	s.description = fmt.Sprintf("%d files", fileCount)
+	s.description = fmt.Sprintf("%d files (%d done)", s.totalFileCount, s.doneFileCount)
 	if s.Description != "" {
 		s.description = s.Description
 	}
 	if len(s.description) > len(s.owner.longestDescription) {
 		go s.owner.updateLongestDescription(s.description)
-	}
-}
-
-func (s *Datasource) updateCurrentFile(file string) {
-	if s.ShowCurrentFile {
-		s.description = file
 	}
 }
 

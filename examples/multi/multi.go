@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/romnnn/mongoimport"
 	"github.com/romnnn/mongoimport/files"
@@ -32,45 +33,45 @@ func main() {
 	csvLoader := loaders.DefaultCSVLoader()
 	csvLoader.Excel = false
 	datasources := []*mongoimport.Datasource{
-		/*
-			{
-				FileProvider: files.List{Files: []string{
-					filepath.Join(dir, "examples/data/ford_escort.csv"),
-					filepath.Join(dir, "examples/data/ford_escort2.csv"),
-				}},
-				Collection: "ford_escorts",
-				IndividualProgress:      true,
-				Loader:     loaders.Loader{SpecificLoader: csvLoader},
-				PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-					log.Debug(loaded)
-					return loaded, nil
-				},
+
+		{
+			FileProvider: &files.List{Files: []string{
+				filepath.Join(dir, "examples/data/ford_escort.csv"),
+				filepath.Join(dir, "examples/data/ford_escort2.csv"),
+			}},
+			Collection:         "ford_escorts",
+			IndividualProgress: true,
+			Loader:             loaders.Loader{SpecificLoader: csvLoader},
+			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
+				// log.Debug(loaded)
+				return loaded, nil
 			},
-			{
-				FileProvider: files.List{Files: []string{
-					filepath.Join(dir, "examples/data/hurricanes.csv"),
-				}},
-				Collection: "hurricanes",
-				IndividualProgress:      true,
-				Loader:     loaders.Loader{SpecificLoader: csvLoader},
-				PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-					log.Debug(loaded)
-					return loaded, nil
-				},
+		},
+		{
+			FileProvider: &files.List{Files: []string{
+				filepath.Join(dir, "examples/data/hurricanes.csv"),
+			}},
+			Collection:         "hurricanes",
+			IndividualProgress: true,
+			Loader:             loaders.Loader{SpecificLoader: csvLoader},
+			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
+				// log.Debug(loaded)
+				return loaded, nil
 			},
-		*/
+		},
 		{
 			// Description: "HupacData",
-			FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/synfioo-data2/eleta_gps_2/HUPAC/"},
+			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/synfioo-data2/eleta_gps_2/HUPAC/"},
 			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data/predictions"},
+			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data"},
 			// FileProvider: &files.Walker{Directory: "/media/roman/SSD1/bpdata/eleta/data/bench"},
-			// FileProvider:       &files.Walker{Directory: filepath.Join(dir, "examples/data")},
-			Collection: "hupac",
+			FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data")},
+			Collection:   "hupac",
 			// IndividualProgress: true,
 			IndividualProgress: false,
 			Loader:             loaders.Loader{SpecificLoader: csvLoader},
 			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
-				log.Debug(loaded)
+				// log.Debug(loaded)
 				return loaded, nil
 			},
 		},
@@ -78,7 +79,7 @@ func main() {
 
 	i := mongoimport.Import{
 		IgnoreErrors:   true,
-		MaxParallelism: 3,
+		MaxParallelism: 20,
 		Sources:        datasources,
 		Connection: &mongoimport.MongoConnection{
 			DatabaseName: "mock",
@@ -94,5 +95,4 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Info(result.Summary())
-	//log.Infof("Total: %d rows were imported successfully and %d failed in %s", result.Succeeded, result.Failed, result.Elapsed)
 }

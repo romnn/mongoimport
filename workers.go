@@ -36,11 +36,15 @@ func (i Import) produceJobs(jobChan chan ImportJob) error {
 					continue
 				}
 				file, err := s.FileProvider.NextFile()
+				// fmt.Printf("\nNext File: %s\n\n", file)
 				if err == io.EOF {
 					// Produced all files for this source
 				} else if err != nil {
 					log.Warn(err)
 				} else {
+					if file == "" {
+						panic(err)
+					}
 					done = false
 					ignoreErrors := i.IgnoreErrors
 					dbName, err := i.sourceDatabaseName(s)
@@ -50,6 +54,7 @@ func (i Import) produceJobs(jobChan chan ImportJob) error {
 					}
 					db := i.dbClient.Database(dbName)
 					collection := db.Collection(s.Collection)
+					// log.Infof("Producing %s into %s", file, s.Collection)
 					jobChan <- ImportJob{
 						Source:             s,
 						File:               file,
@@ -83,27 +88,32 @@ func (i Import) consumeJobs(wg *sync.WaitGroup, jobChan <-chan ImportJob, produc
 	return nil
 }
 
+var sourceDoneCountMux sync.Mutex
+
 func worker(id int, wg *sync.WaitGroup, jobChan <-chan ImportJob, producerDoneChan chan bool, resultsChan chan<- PartialResult) {
 	defer wg.Done()
 	for j := range jobChan {
 		log.Debugf("worker %d started job %v", id, j)
-		j.Source.updateCurrentFile(j.File)
-		result := j.Source.processFile(j.File, j.Loader, j.Collection, j.InsertionBatchSize)
+		j.Source.currentFile = j.File
+		j.Source.updateDescription()
+		result := j.Source.process(j)
 		resultsChan <- result
 		log.Debugf("worker %d finished job %v", id, j)
 	}
 	log.Debugf("worker %d exited", id)
 }
 
-func (s *Datasource) processFile(filename string, ldr *loaders.Loader, collection *mongo.Collection, batchSize int) PartialResult {
+func (s *Datasource) process(job ImportJob) PartialResult {
 	start := time.Now()
 	result := PartialResult{
-		File:       filename,
+		File:       job.File,
+		Source:     job.Source,
 		Collection: s.Collection,
 	}
 
 	// Open File
-	file, err := openFile(filename)
+	file, err := openFile(job.File)
+	defer file.Close()
 	if err != nil {
 		result.errors = append(result.errors, err)
 		return result
@@ -113,7 +123,7 @@ func (s *Datasource) processFile(filename string, ldr *loaders.Loader, collectio
 	updateHandler := s.fileImportWillStart(file)
 
 	// Create a new loader for each file here
-	loader, err := ldr.Create(file, updateHandler)
+	loader, err := job.Loader.Create(file, updateHandler)
 	if err != nil {
 		result.errors = append(result.errors, err)
 		return result
@@ -121,7 +131,7 @@ func (s *Datasource) processFile(filename string, ldr *loaders.Loader, collectio
 
 	loader.Start()
 
-	batch := make([]interface{}, batchSize)
+	batch := make([]interface{}, job.InsertionBatchSize)
 	batched := 0
 	for {
 		exit := false
@@ -145,7 +155,7 @@ func (s *Datasource) processFile(filename string, ldr *loaders.Loader, collectio
 
 		if exit {
 			// Insert remaining
-			err := insert(collection, batch[:batched])
+			err := insert(job.Collection, batch[:batched])
 			if err != nil {
 				log.Warn(err)
 				result.errors = append(result.errors, err)
@@ -175,7 +185,7 @@ func (s *Datasource) processFile(filename string, ldr *loaders.Loader, collectio
 		batched++
 
 		// Flush batch eventually
-		if batched == batchSize {
+		if batched == job.InsertionBatchSize {
 
 			// 	if updateFilter != nil {
 			// 		database.Collection(collection).UpdateMany(
@@ -190,7 +200,7 @@ func (s *Datasource) processFile(filename string, ldr *loaders.Loader, collectio
 			// options := options.UpdateOptions{}
 			// options.se
 			// log.Infof("insert into %s:%s", databaseName, collection)
-			err := insert(collection, batch[:batched])
+			err := insert(job.Collection, batch[:batched])
 			if err != nil {
 				log.Warn(err)
 				result.errors = append(result.errors, err)
@@ -200,7 +210,7 @@ func (s *Datasource) processFile(filename string, ldr *loaders.Loader, collectio
 		}
 	}
 	loader.Finish()
-	s.fileImportDidComplete(file)
+	s.fileImportDidComplete(file.Name())
 	result.Elapsed = time.Since(start)
 	return result
 }

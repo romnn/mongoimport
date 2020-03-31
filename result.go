@@ -47,7 +47,7 @@ func (ir SourceResult) Summary() string {
 type PartialResult struct {
 	File       string
 	Collection string
-	Src        int
+	Source     *Datasource
 	Succeeded  int
 	Failed     int
 	Elapsed    time.Duration
@@ -57,5 +57,5 @@ type PartialResult struct {
 // Summary ...
 func (ir PartialResult) Summary() string {
 	filename := filepath.Base(ir.File)
-	return fmt.Sprintf("[%s -> %s]: %d rows from %d files were imported successfully and %d failed in %s", filename, ir.Collection, ir.Succeeded, ir.Failed, ir.Elapsed)
+	return fmt.Sprintf("[%s -> %s]: %d rows were imported successfully and %d failed in %s", filename, ir.Collection, ir.Succeeded, ir.Failed, ir.Elapsed)
 }

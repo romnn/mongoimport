@@ -99,30 +99,30 @@ func (i *Import) Start() (ImportResult, error) {
 		return result, err
 	}
 
+	//
 	// Collect results for each source
-	sourceResults := make([]SourceResult, len(i.Sources))
+	// sourceResults := make([]SourceResult, len(i.Sources))
 	for partial := range resultsChan {
-		srcResult := &sourceResults[partial.Src]
-		src := i.Sources[partial.Src]
+		partial.Source.doneFileCount++
+		partial.Source.updateDescription()
+		// Add to source result
+		srcResult := &partial.Source.result
 		srcResult.Succeeded += partial.Succeeded
 		srcResult.Failed += partial.Failed
-		srcResult.Collection = src.Collection
+		srcResult.Collection = partial.Source.Collection
 		srcResult.TotalFiles++
 		srcResult.Description = fmt.Sprintf("%d files", result.TotalFiles)
-		if src.IndividualProgress {
+		if partial.Source.IndividualProgress {
 			srcResult.PartialResults = append(srcResult.PartialResults, partial)
 		}
+		// Add to total result
+		result.PartialResults = append(result.PartialResults, *srcResult)
+		result.Succeeded += partial.Succeeded
+		result.Failed += partial.Failed
+		result.TotalFiles++
 	}
 
-	// Collect overall result
-	for _, srcRes := range sourceResults {
-		result.PartialResults = append(result.PartialResults, srcRes)
-		result.Succeeded += srcRes.Succeeded
-		result.Failed += srcRes.Failed
-		result.TotalFiles += srcRes.TotalFiles
-		result.TotalSources++
-	}
-
+	result.TotalSources = len(i.Sources)
 	uiprogress.Stop()
 	log.Info("Completed")
 	result.Elapsed = time.Since(start)

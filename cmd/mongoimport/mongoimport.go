@@ -206,7 +206,7 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					log.Infof("Total: %d rows were imported successfully and %d failed in %s", result.Succeeded, result.Failed, result.Elapsed)
+					log.Infof(result.Summary())
 
 					return err
 				},

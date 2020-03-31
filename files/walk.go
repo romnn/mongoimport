@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const defaulBatchSize = 40
+const defaulBatchSize = 100
 
 // WalkerHandlerFunc ..
 type WalkerHandlerFunc func(path string, info os.FileInfo, err error) bool
@@ -107,8 +107,7 @@ func (provider *Walker) fetchDirMetadata(dir *os.File, totalFiles int64, totalSi
 
 // NextFile ...
 func (provider *Walker) NextFile() (string, error) {
-	provider.batchIndex++
-	if len(provider.batch) <= provider.batchIndex {
+	if provider.batchIndex >= len(provider.batch) {
 		// Load next batch
 		currentFile := provider.recFiles[len(provider.recFiles)-1]
 		batch, err := provider.nextBatch(currentFile)
@@ -118,7 +117,9 @@ func (provider *Walker) NextFile() (string, error) {
 		provider.batch = batch
 		provider.batchIndex = 0
 	}
-	return provider.batch[provider.batchIndex], nil
+	ret := provider.batch[provider.batchIndex]
+	provider.batchIndex++
+	return ret, nil
 }
 
 // nextBatch ...
@@ -129,7 +130,6 @@ func (provider *Walker) nextBatch(currentFile *os.File) ([]string, error) {
 		// Do not allow zero batches
 		provider.BatchSize = defaulBatchSize
 	}
-	// currentFile := provider.recFiles[len(provider.recFiles)-1]
 	filenames, err := currentFile.Readdirnames(provider.BatchSize)
 	if err != nil {
 		return nil, err
@@ -147,21 +147,24 @@ func (provider *Walker) nextBatch(currentFile *os.File) ([]string, error) {
 		}
 		return []string{}, io.EOF
 	}
-	selectedFiles := make([]string, len(files))
-	for i, f := range files {
+	var selectedFiles []string
+	for _, f := range files {
 		fileInfo, err := os.Lstat(f)
 		if err != nil {
 			log.Warn(err)
 			continue
 		}
 		if fileInfo.IsDir() {
+			// panic(fmt.Sprintf("%v is dir", fileInfo.Name()))
 			// Descent into the subdirectory upon the next batch
 			if subDir, err := os.Open(f); err == nil {
 				provider.recFiles = append(provider.recFiles, subDir)
 			}
 		} else if include := provider.Handler(f, fileInfo, err); include {
-			selectedFiles[i] = f
+			selectedFiles = append(selectedFiles, f)
 		}
 	}
+	// panic(fmt.Sprintf("%v", selectedFiles))
+	// fmt.Printf("\n\n%v\n\n", selectedFiles)
 	return selectedFiles, nil
 }
