@@ -15,6 +15,7 @@ require (
 	github.com/mitchellh/gox v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/prometheus/common v0.9.1
+	github.com/romnnn/deepequal v0.0.0-20200304153056-ea9233e420e6
 	github.com/sirupsen/logrus v1.4.2
 	github.com/testcontainers/testcontainers-go v0.3.1
 	github.com/urfave/cli/v2 v2.1.1
