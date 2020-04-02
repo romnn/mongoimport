@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	opt "github.com/romnnn/configo"
 	"github.com/romnnn/mongoimport"
 	"github.com/romnnn/mongoimport/examples"
 	"github.com/romnnn/mongoimport/files"
@@ -60,7 +61,7 @@ func main() {
 			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
 			Options: mongoimport.Options{
 				Collection:         "globed",
-				IndividualProgress: mongoimport.Set(false),
+				IndividualProgress: opt.SetFlag(false),
 			},
 		},
 		{
@@ -69,7 +70,7 @@ func main() {
 			Options: mongoimport.Options{
 				Collection:         "xmldata",
 				Loader:             loaders.Loader{SpecificLoader: xmlLoader},
-				IndividualProgress: mongoimport.Set(false),
+				IndividualProgress: opt.SetFlag(false),
 			},
 		},
 		{
@@ -77,7 +78,7 @@ func main() {
 			FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data"), Handler: isCSVWalkerFunc},
 			Options: mongoimport.Options{
 				Collection:         "walked",
-				IndividualProgress: mongoimport.Set(false),
+				IndividualProgress: opt.SetFlag(false),
 			},
 		},
 	}
@@ -88,9 +89,9 @@ func main() {
 		Connection: conn,
 		// Global options
 		Options: mongoimport.Options{
-			IndividualProgress: mongoimport.Set(true),
+			IndividualProgress: opt.SetFlag(true),
 			Loader:             loaders.Loader{SpecificLoader: csvLoader},
-			FailOnErrors:       mongoimport.Set(false),
+			FailOnErrors:       opt.SetFlag(false),
 			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
 				log.Debug(loaded)
 				return loaded, nil

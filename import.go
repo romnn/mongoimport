@@ -8,6 +8,7 @@ import (
 
 	"github.com/gosuri/uiprogress"
 	"github.com/prometheus/common/log"
+	opt "github.com/romnnn/configo"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -42,8 +43,8 @@ func (i *Import) Start() (ImportResult, error) {
 
 	// Prepare sources
 	for _, source := range i.Sources {
-		// Import options will be overridden with source options of higher precedence
-		source.Options = i.Options.OverriddenWith(source.Options)
+		// Import options will be merged with source options of higher precedence
+		opt.MergeConfig(&source.Options, i.Options)
 
 		if len(source.Collection) > len(i.longestCollectionName) {
 			i.longestCollectionName = source.Collection
@@ -86,7 +87,7 @@ func (i *Import) Start() (ImportResult, error) {
 		srcResult.Failed += partial.Failed
 		srcResult.Collection = partial.Source.Collection
 		srcResult.TotalFiles++
-		if Enabled(partial.Source.Options.IndividualProgress) || Enabled(i.Options.CollectErrors) {
+		if opt.Enabled(partial.Source.Options.IndividualProgress) || opt.Enabled(i.Options.CollectErrors) {
 			srcResult.PartialResults = append(srcResult.PartialResults, partial)
 		}
 		// Add to total result
@@ -106,7 +107,7 @@ func (i *Import) emptyCollections(preWg *sync.WaitGroup) error {
 	// Eventually empty collections
 	needEmpty := make(map[string][]string)
 	for _, source := range i.Sources {
-		if source.Options.Enabled(source.Options.EmptyCollection) {
+		if opt.Enabled(source.Options.EmptyCollection) {
 			existingDatabases, willEmpty := needEmpty[source.Collection]
 			newDatabase, err := i.sourceDatabaseName(source)
 			if err != nil {
