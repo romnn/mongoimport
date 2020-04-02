@@ -6,6 +6,7 @@ import (
 
 	opt "github.com/romnnn/configo"
 	"github.com/romnnn/mongoimport"
+	"github.com/romnnn/mongoimport/config"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -118,6 +119,48 @@ var (
 	}...)
 )
 
+func startImport(c *cli.Context, ldr loaders.ImportLoader) error {
+	setLogLevel(c)
+	providers, err := getFileProviders(c)
+	if err != nil {
+		return err
+	}
+	options, err := parseImportOptions(c)
+	if err != nil {
+		return err
+	}
+	options.Loader.SpecificLoader = ldr
+
+	var datasources []*mongoimport.Datasource
+	for _, provider := range providers {
+		datasources = append(datasources, &mongoimport.Datasource{
+			FileProvider: provider,
+		})
+	}
+
+	i := mongoimport.Import{
+		Options:        options,
+		Sources:        datasources,
+		MaxParallelism: c.Int("parallelism"),
+		Connection:     parseMongoClient(c),
+	}
+
+	result, err := i.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, srcResult := range result.PartialResults {
+		for _, partialResult := range srcResult.PartialResults {
+			for _, err := range partialResult.Errors {
+				log.Error(err)
+			}
+		}
+	}
+	log.Infof(result.Summary())
+	return nil
+}
+
 func main() {
 	app := &cli.App{
 		Name:  "mongoimport",
@@ -130,8 +173,77 @@ func main() {
 				Usage:     "Import newline-delimited JSON objects into database",
 				Flags:     []cli.Flag{},
 				Action: func(c *cli.Context) error {
-					setLogLevel(c)
 					return fmt.Errorf("JSON is not yet implemented")
+				},
+			},
+			{
+				Name:      "xml",
+				ArgsUsage: "<xml-files>",
+				Usage:     "Import XML files into database",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "lower-case",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "depth",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "snake-case-keys",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "attr-prefix",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "handle-xmpp-stream-tag",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "include-tag-seq-num",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "decode-simple-values-as-map",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "cast-nan-inf",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "cast-to-int",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "cast-to-float",
+						Usage: "",
+					},
+					&cli.BoolFlag{
+						Name:  "cast-to-bool",
+						Usage: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					xmlLoader := loaders.DefaultXMLLoader()
+					xmlLoader.Config = config.XMLReaderConfig{
+						LowerCase:               opt.SetFlag(c.Bool("lower-case")),
+						Depth:                   opt.SetInt(c.Int("depth")),
+						SnakeCaseKeys:           opt.SetFlag(c.Bool("snake-case-keys")),
+						AttrPrefix:              c.String("attr-prefix"),
+						HandleXMPPStreamTag:     opt.SetFlag(c.Bool("handle-xmpp-stream-tag")),
+						IncludeTagSeqNum:        opt.SetFlag(c.Bool("include-tag-seq-num")),
+						DecodeSimpleValuesAsMap: opt.SetFlag(c.Bool("decode-simple-values-as-map")),
+
+						// Cast config
+						CastNanInf:  opt.SetFlag(c.Bool("cast-nan-inf")),
+						CastToInt:   opt.SetFlag(c.Bool("cast-to-int")),
+						CastToFloat: opt.SetFlag(c.Bool("cast-to-float")),
+						CastToBool:  opt.SetFlag(c.Bool("cast-to-bool")),
+					}
+					return startImport(c, xmlLoader)
 				},
 			},
 			{
@@ -168,15 +280,6 @@ func main() {
 					},
 				},
 				Action: func(c *cli.Context) error {
-					setLogLevel(c)
-					providers, err := getFileProviders(c)
-					if err != nil {
-						return err
-					}
-					database, collection, err := getDatabaseParameters(c)
-					if err != nil {
-						return err
-					}
 					csvLoader := loaders.DefaultCSVLoader()
 					csvLoader.SkipHeader = c.Bool("skip-header")
 					csvLoader.Fields = c.String("fields")
@@ -184,51 +287,7 @@ func main() {
 					csvLoader.SkipParseHeader = c.Bool("skip-parse-delimiter")
 					csvLoader.Excel = c.Bool("excel")
 					csvLoader.Delimiter = loaders.ParseDelimiter(c.String("delimiter"), csvLoader.SkipParseHeader)
-
-					options := mongoimport.Options{
-						DatabaseName:       database,
-						Collection:         collection,
-						IndividualProgress: opt.SetFlag(true),
-						ShowCurrentFile:    opt.SetFlag(false),
-						Loader:             loaders.Loader{SpecificLoader: csvLoader},
-						// Hooks are ommitted
-						EmptyCollection:    opt.SetFlag(c.Bool("empty")),
-						Sanitize:           opt.SetFlag(c.Bool("sanitize")),
-						FailOnErrors:       opt.SetFlag(c.Bool("fail-on-errors")),
-						CollectErrors:      opt.SetFlag(true),
-						InsertionBatchSize: c.Int("insertion-batch-size"),
-					}
-
-					// Add datasources
-					var datasources []*mongoimport.Datasource
-					for _, provider := range providers {
-						datasources = append(datasources, &mongoimport.Datasource{
-							FileProvider: provider,
-						})
-					}
-
-					i := mongoimport.Import{
-						Options:        options,
-						Sources:        datasources,
-						MaxParallelism: c.Int("parallelism"),
-						Connection:     parseMongoClient(c),
-					}
-
-					result, err := i.Start()
-					if err != nil {
-						log.Fatal(err)
-					}
-					// Print errors
-					for _, srcResult := range result.PartialResults {
-						for _, partialResult := range srcResult.PartialResults {
-							for _, err := range partialResult.Errors {
-								log.Error(err)
-							}
-						}
-					}
-					log.Infof(result.Summary())
-
-					return err
+					return startImport(c, csvLoader)
 				},
 			},
 		},

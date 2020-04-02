@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	opt "github.com/romnnn/configo"
 	"github.com/romnnn/mongoimport"
 	"github.com/romnnn/mongoimport/files"
 	"github.com/romnnn/mongoimport/validation"
@@ -86,4 +87,23 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func parseImportOptions(c *cli.Context) (mongoimport.Options, error) {
+	database, collection, err := getDatabaseParameters(c)
+	if err != nil {
+		return mongoimport.Options{}, err
+	}
+	return mongoimport.Options{
+		DatabaseName:       database,
+		Collection:         collection,
+		IndividualProgress: opt.SetFlag(true),
+		ShowCurrentFile:    opt.SetFlag(false),
+		// Hooks are ommitted
+		EmptyCollection:    opt.SetFlag(c.Bool("empty")),
+		Sanitize:           opt.SetFlag(c.Bool("sanitize")),
+		FailOnErrors:       opt.SetFlag(c.Bool("fail-on-errors")),
+		CollectErrors:      opt.SetFlag(true),
+		InsertionBatchSize: c.Int("insertion-batch-size"),
+	}, nil
 }

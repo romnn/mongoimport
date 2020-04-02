@@ -3,12 +3,13 @@ package loaders
 import (
 	"io"
 
+	"github.com/romnnn/mongoimport/config"
 	"github.com/romnnn/mongoimport/loaders/internal"
 )
 
 // XMLLoader ...
 type XMLLoader struct {
-	Depth int
+	Config config.XMLReaderConfig
 
 	reader      io.Reader
 	resultsChan chan internal.MapXMLParseResult
@@ -34,7 +35,7 @@ func (xmll XMLLoader) Create(reader io.Reader, skipSanitization bool) ImportLoad
 // Start ...
 func (xmll *XMLLoader) Start() error {
 	xmll.resultsChan = make(chan internal.MapXMLParseResult)
-	err := internal.NewMapXMLReader(xmll.reader, xmll.resultsChan)
+	err := internal.NewMapXMLReader(xmll.reader, xmll.Config, xmll.resultsChan)
 	if err != nil {
 		return err
 	}

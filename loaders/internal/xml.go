@@ -8,33 +8,8 @@ import (
 	"strings"
 
 	opt "github.com/romnnn/configo"
+	"github.com/romnnn/mongoimport/config"
 )
-
-// MapXMLReaderConfig ...
-type MapXMLReaderConfig struct {
-	LowerCase               *opt.Flag
-	Depth                   *opt.Int
-	SnakeCaseKeys           *opt.Flag
-	AttrPrefix              string
-	HandleXMPPStreamTag     *opt.Flag
-	IncludeTagSeqNum        *opt.Flag
-	DecodeSimpleValuesAsMap *opt.Flag
-
-	// Cast config
-	CastNanInf     *opt.Flag
-	CheckTagToSkip func(string) bool
-	CastToInt      *opt.Flag
-	CastToFloat    *opt.Flag
-	CastToBool     *opt.Flag
-}
-
-// DefaultConfig ...
-var DefaultConfig = MapXMLReaderConfig{
-	Depth:       opt.SetInt(1),
-	AttrPrefix:  `-`,
-	CastToFloat: opt.SetFlag(true),
-	CastToBool:  opt.SetFlag(true),
-}
 
 // MapXMLParseResult ...
 type MapXMLParseResult struct {
@@ -44,7 +19,7 @@ type MapXMLParseResult struct {
 
 // MapXMLReader ...
 type MapXMLReader struct {
-	Config     MapXMLReaderConfig
+	Config     config.XMLReaderConfig
 	ResulsChan chan<- MapXMLParseResult
 }
 
@@ -74,7 +49,7 @@ func (b *byteReader) ReadByte() (byte, error) {
 }
 
 // NewMapXMLReader ...
-func NewMapXMLReader(xmlReader io.Reader, resulsChan chan<- MapXMLParseResult, cast ...bool) error {
+func NewMapXMLReader(xmlReader io.Reader, conf config.XMLReaderConfig, resulsChan chan<- MapXMLParseResult, cast ...bool) error {
 	var r bool
 	if len(cast) == 1 {
 		r = cast[0]
@@ -85,8 +60,9 @@ func NewMapXMLReader(xmlReader io.Reader, resulsChan chan<- MapXMLParseResult, c
 
 	var mxml MapXMLReader
 	mxml.ResulsChan = resulsChan
+	mxml.Config = conf
 	// Merge configs
-	opt.MergeConfig(&mxml.Config, DefaultConfig)
+	opt.MergeConfig(&mxml.Config, config.DefaultXMLConfig)
 	go func() {
 		mxml.xmlReaderToMap(xmlReader, r)
 		close(mxml.ResulsChan)
