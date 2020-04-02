@@ -124,7 +124,7 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 
 	loader.Start()
 
-	batch := make([]interface{}, job.InsertionBatchSize)
+	var batch []interface{}
 	batched := 0
 	for {
 		exit := false
@@ -165,21 +165,22 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 			continue
 		}
 
-		// Apply pre dump hook
-		dumped, err := s.PreDump(loaded)
-		if err != nil {
-			log.Error(err)
-			result.Failed++
-			continue
+		// var dumped []interface{}
+		for _, l := range loaded {
+			// Apply pre dump hook
+			d, err := s.PreDump(l)
+			if err != nil {
+				log.Error(err)
+				result.Failed++
+				continue
+			}
+			batch = append(batch, d...)
+			batched += len(d)
 		}
 
-		// Convert to BSON and add to batch
-		batch[batched] = dumped
-		batched++
-
-		// Flush batch eventually
-		if batched == job.InsertionBatchSize {
-
+		// Flush batch
+		for batched >= job.InsertionBatchSize {
+			minibatch := batch[:job.InsertionBatchSize]
 			// 	if updateFilter != nil {
 			// 		database.Collection(collection).UpdateMany(
 			// 			context.Background(),
@@ -193,13 +194,15 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 			// options := options.UpdateOptions{}
 			// options.se
 			// log.Infof("insert into %s:%s", databaseName, collection)
-			err := insert(job.Collection, batch[:batched])
+			err := insert(job.Collection, minibatch)
 			if err != nil {
 				log.Warn(err)
 				result.Errors = append(result.Errors, err)
+				break
 			}
-			result.Succeeded += batched
-			batched = 0
+			result.Succeeded += len(minibatch)
+			batched -= len(minibatch)
+			batch = batch[len(minibatch):]
 		}
 	}
 	loader.Finish()

@@ -92,9 +92,9 @@ func main() {
 			IndividualProgress: opt.SetFlag(true),
 			Loader:             loaders.Loader{SpecificLoader: csvLoader},
 			FailOnErrors:       opt.SetFlag(false),
-			PostLoad: func(loaded map[string]interface{}) (interface{}, error) {
+			PostLoad: func(loaded map[string]interface{}) ([]interface{}, error) {
 				log.Debug(loaded)
-				return loaded, nil
+				return []interface{}{loaded}, nil
 			},
 		},
 	}

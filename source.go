@@ -121,18 +121,18 @@ func (s *Datasource) updateDescription() {
 }
 
 // PostLoadHook ...
-type PostLoadHook func(loaded map[string]interface{}) (interface{}, error)
+type PostLoadHook func(loaded map[string]interface{}) ([]interface{}, error)
 
 // PreDumpHook ...
-type PreDumpHook func(loaded interface{}) (interface{}, error)
+type PreDumpHook func(loaded interface{}) ([]interface{}, error)
 
 // UpdateFilterHook ...
-type UpdateFilterHook func(loaded interface{}) (interface{}, error)
+type UpdateFilterHook func(loaded interface{}) ([]interface{}, error)
 
-func defaultPostLoad(loaded map[string]interface{}) (interface{}, error) {
-	return loaded, nil
+func defaultPostLoad(loaded map[string]interface{}) ([]interface{}, error) {
+	return []interface{}{loaded}, nil
 }
 
-func defaultPreDump(loaded interface{}) (interface{}, error) {
-	return loaded, nil
+func defaultPreDump(loaded interface{}) ([]interface{}, error) {
+	return []interface{}{loaded}, nil
 }
