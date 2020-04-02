@@ -4,6 +4,8 @@
 ![GitHub](https://img.shields.io/github/license/romnnn/mongoimport)
 [![GoDoc](https://godoc.org/github.com/romnnn/mongoimport?status.svg)](https://godoc.org/github.com/romnnn/mongoimport)
 [![Test Coverage](https://codecov.io/gh/romnnn/mongoimport/branch/master/graph/badge.svg)](https://codecov.io/gh/romnnn/mongoimport)
+[![Release](https://img.shields.io/github/release/romnnn/mongoimport)](https://github.com/romnnn/mongoimport/releases/latest)
+[![Docker Pulls](https://img.shields.io/docker/pulls/romnn/mongoimport)](https://hub.docker.com/r/romnn/mongoimport)
 
 CLI and go library for importing data from CSV, JSON or XML files into MongoDB.
 

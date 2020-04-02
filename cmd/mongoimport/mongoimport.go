@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	opt "github.com/romnnn/configo"
 	"github.com/romnnn/mongoimport"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
@@ -187,14 +188,14 @@ func main() {
 					options := mongoimport.Options{
 						DatabaseName:       database,
 						Collection:         collection,
-						IndividualProgress: mongoimport.Set(true),
-						ShowCurrentFile:    mongoimport.Set(false),
+						IndividualProgress: opt.SetFlag(true),
+						ShowCurrentFile:    opt.SetFlag(false),
 						Loader:             loaders.Loader{SpecificLoader: csvLoader},
 						// Hooks are ommitted
-						EmptyCollection:    mongoimport.Set(c.Bool("empty")),
-						Sanitize:           mongoimport.Set(c.Bool("sanitize")),
-						FailOnErrors:       mongoimport.Set(c.Bool("fail-on-errors")),
-						CollectErrors:      mongoimport.Set(true),
+						EmptyCollection:    opt.SetFlag(c.Bool("empty")),
+						Sanitize:           opt.SetFlag(c.Bool("sanitize")),
+						FailOnErrors:       opt.SetFlag(c.Bool("fail-on-errors")),
+						CollectErrors:      opt.SetFlag(true),
 						InsertionBatchSize: c.Int("insertion-batch-size"),
 					}
 

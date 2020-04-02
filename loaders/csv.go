@@ -1,7 +1,6 @@
 package loaders
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -9,66 +8,8 @@ import (
 
 	csv "github.com/JensRantil/go-csv"
 	"github.com/prometheus/common/log"
-	"github.com/romnnn/mongoimport/validation"
+	"github.com/romnnn/mongoimport/loaders/internal"
 )
-
-func containsDelimiter(col string) bool {
-	return strings.Contains(col, ";") || strings.Contains(col, ",") ||
-		strings.Contains(col, "|") || strings.Contains(col, "\t") ||
-		strings.Contains(col, "^") || strings.Contains(col, "~")
-}
-
-// ParseDelimiter parses the delimiter for an escape sequence. This allows windows users to pass
-// in \t since they cannot pass "`t" or "$Tab" to the program.
-func ParseDelimiter(delim string, skip bool) string {
-	if !strings.HasPrefix(delim, "\\") || skip {
-		return delim
-	}
-	switch delim {
-	case "\\t":
-		{
-			return "\t"
-		}
-	default:
-		{
-			return delim
-		}
-	}
-}
-
-// Parse columns from first header row or from flags
-func parseColumns(reader *csv.Reader, skipHeader bool, fields string, sanitize bool) ([]string, error) {
-	var err error
-	var columns []string
-	if fields != "" {
-		columns = strings.Split(fields, ",")
-
-		if skipHeader {
-			reader.Read() // One row only
-		}
-	} else {
-		columns, err = reader.Read()
-		log.Debugf("%v columns\n%v\n", len(columns), columns)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	for _, col := range columns {
-		if containsDelimiter(col) {
-			return columns, errors.New("Please specify the correct delimiter with -d.\n" +
-				"Header column contains a delimiter character: " + col)
-		}
-	}
-
-	for i, col := range columns {
-		if sanitize && !validation.ValidFieldName(col) {
-			columns[i] = validation.MongoSanitize(col)
-		}
-	}
-
-	return columns, nil
-}
 
 // CSVLoader ...
 type CSVLoader struct {
@@ -109,7 +50,7 @@ func (csvl *CSVLoader) Start() error {
 	}
 
 	csvl.csvReader = csv.NewDialectReader(csvl.reader, dialect)
-	columns, err := parseColumns(csvl.csvReader, csvl.SkipHeader, csvl.Fields, !csvl.SkipSanitization)
+	columns, err := internal.ParseColumns(csvl.csvReader, csvl.SkipHeader, csvl.Fields, !csvl.SkipSanitization)
 	if err != nil {
 		return err
 	}
@@ -165,4 +106,22 @@ func (csvl *CSVLoader) Load() (entry map[string]interface{}, err error) {
 		// cols[i] = col
 	}
 	return cols, nil
+}
+
+// ParseDelimiter parses the delimiter for an escape sequence. This allows windows users to pass
+// in \t since they cannot pass "`t" or "$Tab" to the program.
+func ParseDelimiter(delim string, skip bool) string {
+	if !strings.HasPrefix(delim, "\\") || skip {
+		return delim
+	}
+	switch delim {
+	case "\\t":
+		{
+			return "\t"
+		}
+	default:
+		{
+			return delim
+		}
+	}
 }

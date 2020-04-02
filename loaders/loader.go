@@ -54,7 +54,7 @@ func (l *Loader) Start() error {
 }
 
 // Create ...
-func (l *Loader) Create(file *os.File, updateHandler io.Writer) (*Loader, error) {
+func (l *Loader) Create(file io.Reader, updateHandler io.Writer) (*Loader, error) {
 	loader := &Loader{
 		SkipSanitization: l.SkipSanitization,
 		ready:            true,

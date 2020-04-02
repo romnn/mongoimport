@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/gosuri/uiprogress"
+	opt "github.com/romnnn/configo"
 	"github.com/romnnn/mongoimport/files"
 )
 
@@ -46,7 +47,7 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 	var handler progressHandler
 	var bar *uiprogress.Bar
 	s.owner.newProgressBarMux.Lock()
-	if Enabled(s.Options.IndividualProgress) {
+	if opt.Enabled(s.Options.IndividualProgress) {
 		// Create a new progress bar
 		filename := filepath.Base(file.Name())
 		bar = uiprogress.AddBar(10).AppendCompleted()
@@ -69,7 +70,7 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 					// If there is no description for this
 					s.totalFileCount = interimFileCount
 					s.updateDescription()
-					if Enabled(s.Options.ShowCurrentFile) && len(interimLongestFilename) > len(s.owner.longestDescription) {
+					if opt.Enabled(s.Options.ShowCurrentFile) && len(interimLongestFilename) > len(s.owner.longestDescription) {
 						go s.owner.updateLongestDescription(interimLongestFilename)
 					}
 				})
@@ -85,7 +86,7 @@ func (s *Datasource) fileImportWillStart(file *os.File) progressHandler {
 
 func (s *Datasource) fileImportDidComplete(file string) {
 	s.updateDescription()
-	if Enabled(s.Options.IndividualProgress) {
+	if opt.Enabled(s.Options.IndividualProgress) {
 		if bar, ok := s.bars[file]; ok {
 			// Mark the bar as completed and remove it's update handler
 			if bar != nil {
@@ -107,7 +108,7 @@ func (s *Datasource) prepareHooks() {
 }
 
 func (s *Datasource) updateDescription() {
-	if Enabled(s.Options.ShowCurrentFile) {
+	if opt.Enabled(s.Options.ShowCurrentFile) {
 		s.description = filepath.Base(filepath.Base(s.currentFile))
 	}
 	s.description = fmt.Sprintf("%d of %d", s.doneFileCount, s.totalFileCount)

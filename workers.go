@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	opt "github.com/romnnn/configo"
 	"github.com/romnnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -55,7 +56,7 @@ func (i *Import) produceJobs(jobChan chan ImportJob) error {
 						Source:             s,
 						File:               file,
 						Loader:             &s.Loader,
-						IgnoreErrors:       i.Options.Enabled(i.Options.FailOnErrors),
+						IgnoreErrors:       opt.Enabled(i.Options.FailOnErrors),
 						InsertionBatchSize: i.sourceBatchSize(s),
 						Collection:         collection,
 					}
@@ -135,7 +136,7 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 			default:
 				result.Failed++
 				result.Errors = append(result.Errors, err)
-				if s.Options.Enabled(s.Options.FailOnErrors) {
+				if opt.Enabled(s.Options.FailOnErrors) {
 					log.Warnf(err.Error())
 					continue
 				} else {
