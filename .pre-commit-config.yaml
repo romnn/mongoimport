@@ -6,5 +6,5 @@
     - id: go-lint
     - id: go-imports
     - id: go-cyclo
-      args: [-over=15]
+      args: [-over=40]
     - id: go-build

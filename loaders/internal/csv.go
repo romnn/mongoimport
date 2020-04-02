@@ -15,24 +15,6 @@ func containsDelimiter(col string) bool {
 		strings.Contains(col, "^") || strings.Contains(col, "~")
 }
 
-// ParseDelimiter parses the delimiter for an escape sequence. This allows windows users to pass
-// in \t since they cannot pass "`t" or "$Tab" to the program.
-func ParseDelimiter(delim string, skip bool) string {
-	if !strings.HasPrefix(delim, "\\") || skip {
-		return delim
-	}
-	switch delim {
-	case "\\t":
-		{
-			return "\t"
-		}
-	default:
-		{
-			return delim
-		}
-	}
-}
-
 // ParseColumns from first header row or from flags
 func ParseColumns(reader *csv.Reader, skipHeader bool, fields string, sanitize bool) ([]string, error) {
 	var err error

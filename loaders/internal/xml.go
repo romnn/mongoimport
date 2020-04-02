@@ -300,34 +300,49 @@ func (reader *MapXMLReader) cast(s string, r bool, t string) interface{} {
 		}
 
 		// handle numeric strings ahead of boolean
-		if opt.Enabled(reader.Config.CastToInt) {
-			if f, err := strconv.ParseInt(s, 10, 64); err == nil {
-				return f
-			}
-			if f, err := strconv.ParseUint(s, 10, 64); err == nil {
-				return f
-			}
+		if f, err := reader.castToInt(s); err == nil {
+			return f
 		}
 
-		if opt.Enabled(reader.Config.CastToFloat) {
-			if f, err := strconv.ParseFloat(s, 64); err == nil {
-				return f
-			}
+		if f, err := reader.castToFloat(s); err == nil {
+			return f
 		}
 
-		// ParseBool treats "1"==true & "0"==false, we've already scanned those
-		// values as float64. See if value has 't' or 'f' as initial screen to
-		// minimize calls to ParseBool; also, see if len(s) < 6.
-		if opt.Enabled(reader.Config.CastToBool) {
-			if len(s) > 0 && len(s) < 6 {
-				switch s[:1] {
-				case "t", "T", "f", "F":
-					if b, err := strconv.ParseBool(s); err == nil {
-						return b
-					}
-				}
-			}
+		if f, err := reader.castToBool(s); err == nil {
+			return f
 		}
 	}
 	return s
+}
+
+func (reader *MapXMLReader) castToFloat(s string) (interface{}, error) {
+	if opt.Enabled(reader.Config.CastToFloat) {
+		return strconv.ParseFloat(s, 64)
+	}
+	return nil, errors.New("CastToFloat is not enabled")
+}
+
+func (reader *MapXMLReader) castToInt(s string) (interface{}, error) {
+	if opt.Enabled(reader.Config.CastToInt) {
+		if f, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return f, nil
+		}
+		return strconv.ParseUint(s, 10, 64)
+	}
+	return nil, errors.New("CastToInt is not enabled")
+}
+
+func (reader *MapXMLReader) castToBool(s string) (interface{}, error) {
+	// ParseBool treats "1"==true & "0"==false, we've already scanned those
+	// values as float64. See if value has 't' or 'f' as initial screen to
+	// minimize calls to ParseBool; also, see if len(s) < 6.
+	if opt.Enabled(reader.Config.CastToBool) {
+		if len(s) > 0 && len(s) < 6 {
+			switch s[:1] {
+			case "t", "T", "f", "F":
+				return strconv.ParseBool(s)
+			}
+		}
+	}
+	return nil, errors.New("CastToFloat is not enabled")
 }

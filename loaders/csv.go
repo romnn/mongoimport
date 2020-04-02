@@ -107,3 +107,21 @@ func (csvl *CSVLoader) Load() (entry map[string]interface{}, err error) {
 	}
 	return cols, nil
 }
+
+// ParseDelimiter parses the delimiter for an escape sequence. This allows windows users to pass
+// in \t since they cannot pass "`t" or "$Tab" to the program.
+func ParseDelimiter(delim string, skip bool) string {
+	if !strings.HasPrefix(delim, "\\") || skip {
+		return delim
+	}
+	switch delim {
+	case "\\t":
+		{
+			return "\t"
+		}
+	default:
+		{
+			return delim
+		}
+	}
+}
