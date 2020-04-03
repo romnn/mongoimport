@@ -38,13 +38,11 @@ func (i *Import) produceJobs(jobChan chan ImportJob) error {
 					Collection: s.Collection,
 				}
 				if err == io.EOF {
-					panic(err)
 					// No-op (produced all files for this source)
 					break
 				} else if err != nil {
 					partialResult.Errors = append(partialResult.Errors, err)
 					s.result.PartialResults = append(s.result.PartialResults, partialResult)
-					panic(err)
 					log.Warn(err)
 				} else {
 					dbName, err := i.sourceDatabaseName(s)
@@ -140,11 +138,9 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
 				if opt.Enabled(s.Options.FailOnErrors) {
-					panic(err)
 					log.Errorf(err.Error())
 					break
 				} else {
-					panic(err)
 					log.Warnf(err.Error())
 					continue
 				}
@@ -155,7 +151,6 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 			// Insert remaining
 			err := insert(job.Collection, batch[:batched])
 			if err != nil {
-				panic(err)
 				log.Warn(err)
 				result.Errors = append(result.Errors, err)
 			}
@@ -202,7 +197,6 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 			// log.Infof("insert into %s:%s", databaseName, collection)
 			err := insert(job.Collection, minibatch)
 			if err != nil {
-				panic(err)
 				log.Warn(err)
 				result.Errors = append(result.Errors, err)
 				break

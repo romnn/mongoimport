@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"os"
-	"path/filepath"
 
 	opt "github.com/romnnn/configo"
 	"github.com/romnnn/mongoimport"
@@ -62,7 +61,8 @@ func main() {
 			},
 		*/
 		{
-			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
+			// FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
+			FileProvider: &files.Glob{Pattern: "/home/roman/dev/bpdata/planet/data/abschluss/*.csv"},
 			Options: mongoimport.Options{
 				Collection:         "globed",
 				IndividualProgress: opt.SetFlag(false),
@@ -91,7 +91,7 @@ func main() {
 
 	i := mongoimport.Import{
 		// Allow concurrent processing of at most 2 files with 2 threads
-		MaxParallelism: 1,
+		MaxParallelism: 200,
 		Sources:        datasources,
 		Connection:     conn,
 		// Global options
