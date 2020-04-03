@@ -25,3 +25,4 @@ coverage*
 *.exe
 build/
 __pycache__/
+examples/
