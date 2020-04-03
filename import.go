@@ -21,6 +21,7 @@ type Import struct {
 	dbClient                    *mongo.Client
 	longestCollectionName       string
 	longestDescription          string
+	sources                     []*Datasource
 	newProgressBarMux           sync.Mutex
 	updateLongestDescriptionMux sync.Mutex
 }
@@ -41,8 +42,14 @@ func (i *Import) Start() (ImportResult, error) {
 		return result, err
 	}
 
-	// Prepare sources
 	for _, source := range i.Sources {
+		if !source.Disabled {
+			i.sources = append(i.sources, source)
+		}
+	}
+
+	// Prepare sources
+	for _, source := range i.sources {
 		// Import options will be merged with source options of higher precedence
 		opt.MergeConfig(&source.Options, i.Options)
 
@@ -97,7 +104,7 @@ func (i *Import) Start() (ImportResult, error) {
 		result.TotalFiles++
 	}
 
-	result.TotalSources = len(i.Sources)
+	result.TotalSources = len(i.sources)
 	uiprogress.Stop()
 	result.Elapsed = time.Since(start)
 	return result, nil
@@ -106,7 +113,7 @@ func (i *Import) Start() (ImportResult, error) {
 func (i *Import) emptyCollections(preWg *sync.WaitGroup) error {
 	// Eventually empty collections
 	needEmpty := make(map[string][]string)
-	for _, source := range i.Sources {
+	for _, source := range i.sources {
 		if opt.Enabled(source.Options.EmptyCollection) {
 			existingDatabases, willEmpty := needEmpty[source.Collection]
 			newDatabase, err := i.sourceDatabaseName(source)

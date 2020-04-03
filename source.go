@@ -13,6 +13,7 @@ import (
 // Datasource ...
 type Datasource struct {
 	Options
+	Disabled         bool
 	Description      string
 	FileProvider     files.FileProvider
 	bars             map[string]*uiprogress.Bar

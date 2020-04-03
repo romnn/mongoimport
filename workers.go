@@ -22,14 +22,14 @@ type ImportJob struct {
 }
 
 func (i *Import) produceJobs(jobChan chan ImportJob) error {
-	for _, s := range i.Sources {
+	for _, s := range i.sources {
 		err := s.FileProvider.Prepare()
 		if err != nil {
 			return err
 		}
 	}
 	go func() {
-		for _, s := range i.Sources {
+		for _, s := range i.sources {
 			for {
 				file, err := s.FileProvider.NextFile()
 				partialResult := PartialResult{
