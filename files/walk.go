@@ -153,6 +153,7 @@ func (provider *Walker) nextBatch(currentFile *os.File) ([]string, error) {
 	for _, f := range files {
 		fileInfo, err := os.Lstat(f)
 		if err != nil {
+			panic(err)
 			log.Warn(err)
 			continue
 		}
