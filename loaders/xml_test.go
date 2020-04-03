@@ -119,3 +119,26 @@ func TestDeepXMLLoading(t *testing.T) {
 	}
 	ldr.Finish()
 }
+
+func TestEntireXMLLoading(t *testing.T) {
+	xmlLoader := &XMLLoader{}
+	xmlLoader.Config.Depth = opt.SetInt(0)
+	loader := &Loader{SpecificLoader: xmlLoader}
+	ldr, err := loader.Create(strings.NewReader(basicXML), mockUpdateHandler{})
+	if err != nil {
+		t.Fatal("Failed to create the loader")
+	}
+	ldr.Start()
+	all, err := ldr.Load()
+	if err != nil && err != io.EOF {
+		t.Errorf("Failed to load entire XML: %s", err.Error())
+	}
+	if len(all) != 1 {
+		t.Errorf("Entire XML has length other than 1 (%d): %s\n", len(all), all)
+	}
+	_, done := ldr.Load()
+	if done != io.EOF {
+		t.Error("Loader did not signal EOF after reading the entire document")
+	}
+	ldr.Finish()
+}

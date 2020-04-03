@@ -141,6 +141,7 @@ func (reader *MapXMLReader) xmlToMapParser(depth int, skey string, a []xml.Attr,
 			if skey == "" {
 				children, err := reader.xmlToMapParser(depth+1, tt.Name.Local, tt.Attr, p, r)
 				if hasResult {
+					reader.ResulsChan <- MapXMLParseResult{Entry: children, Err: err}
 					return children, err
 				}
 				return nil, err
@@ -205,7 +206,6 @@ func (reader *MapXMLReader) xmlToMapParser(depth int, skey string, a []xml.Attr,
 			}
 
 			if hasResult {
-				// Make sure we load the terminal either way
 				reader.ResulsChan <- MapXMLParseResult{Entry: nn}
 			}
 
@@ -223,7 +223,7 @@ func (reader *MapXMLReader) xmlToMapParser(depth int, skey string, a []xml.Attr,
 				}
 			}
 			// We do not want to keep values in memory that have not reached the required depth
-			if depth <= opt.GetIntOrDefault(reader.Config.Depth, 1) {
+			if depth < opt.GetIntOrDefault(reader.Config.Depth, 1) {
 				return nil, nil
 			}
 			return n, nil
@@ -246,10 +246,12 @@ func (reader *MapXMLReader) xmlToMapParser(depth int, skey string, a []xml.Attr,
 					// a p.Token() decoding error when the BOM is UTF-16 or UTF-32.
 					continue
 				}
-				if opt.GetIntOrDefault(reader.Config.Depth, 1) > depth {
-					// Make sure we do not miss the terminal entry no matter what
-					reader.ResulsChan <- MapXMLParseResult{Entry: terminal}
-				}
+				/*
+					if opt.GetIntOrDefault(reader.Config.Depth, 1) > depth {
+						// Make sure we do not miss the terminal entry no matter what
+						reader.ResulsChan <- MapXMLParseResult{Entry: terminal}
+					}
+				*/
 			}
 		default:
 			// noop
