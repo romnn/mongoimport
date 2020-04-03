@@ -2,7 +2,6 @@ package files
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,7 +16,6 @@ type Glob struct {
 	matchCount       int
 	BatchSize        int
 	batchIndex       int
-	doneChan         chan bool
 	matchesChan      chan string
 	fetchMatchesChan chan string
 	file             *os.File
@@ -130,21 +128,7 @@ func (provider *Glob) Prepare() error {
 	}
 	provider.matchesChan = make(chan string, provider.BatchSize)
 	go func() {
-		matches, err := provider.glob(provider.Pattern, 0, provider.matchesChan)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("Closing with m=%s (length %d)\n", matches, len(matches))
-		// panic(fmt.Sprintf("Closing with m=%s (length %d)", matches, len(matches)))
-		/*
-			for {
-				x, ok := <-provider.matchesChan
-				fmt.Println(ok, x)
-			}
-		*/
-		// panic(fmt.Sprintf("Channel content=%s", provider.matchesChan))
-		// panic(fmt.Sprintf("Closing with m=%s", m))
-		// doneChan
+		provider.glob(provider.Pattern, 0, provider.matchesChan)
 		close(provider.matchesChan)
 	}()
 	return nil
@@ -173,25 +157,21 @@ func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string)
 			return matches, errors.New("There were errors")
 		}
 		return matches, nil
-		// panic(fmt.Sprintf("hasMeta m=%s", matches))
 	}
 
 	// Prevent infinite recursion. See issue 15879.
 	if dir == pattern {
-		panic(pattern)
 		return nil, filepath.ErrBadPattern
 	}
 
 	m, err := provider.glob(dir, depth+1, matchesChan)
 	if err != nil {
-		panic(dir)
 		return nil, err
 	}
 	var matches []string
 	for _, d := range m {
 		matches, errs := provider.globDir(d, file, depth, matches, matchesChan)
 		if len(errs) > 0 {
-			panic(file)
 			return matches, errors.New("there were errors")
 		}
 	}
@@ -274,17 +254,7 @@ func (provider *Glob) FetchDirMetadata(updateHandler MetadataUpdateHandler) {
 
 // NextFile ...
 func (provider *Glob) NextFile() (string, error) {
-	/*
-		select {
-		case file := <-provider.matchesChan:
-			return file, nil
-		case <-provider.done:
-			return "", io.EOF
-		}
-	*/
-
 	file, ok := <-provider.matchesChan
-	fmt.Println(ok, file, len(provider.matchesChan))
 	if !ok {
 		return "", io.EOF
 	}
