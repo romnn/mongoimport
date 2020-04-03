@@ -1,6 +1,7 @@
 package files
 
 import (
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,13 +12,14 @@ import (
 
 // Glob ...
 type Glob struct {
-	Pattern      string
-	matchCount   int
-	BatchSize    int
-	batchIndex   int
-	matchesChan  chan string
-	file         *os.File
-	dir, pattern string
+	Pattern          string
+	matchCount       int
+	BatchSize        int
+	batchIndex       int
+	matchesChan      chan string
+	fetchMatchesChan chan string
+	file             *os.File
+	dir, pattern     string
 }
 
 // hasMeta reports whether path contains any of the magic characters
@@ -137,6 +139,7 @@ func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string)
 		if _, err := os.Lstat(pattern); err != nil {
 			return nil, nil
 		}
+		matchesChan <- pattern
 		return []string{pattern}, nil
 	}
 
@@ -149,7 +152,11 @@ func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string)
 	}
 
 	if !hasMeta(dir[volumeLen:]) {
-		return provider.globDir(dir, file, depth, nil, matchesChan)
+		matches, errs := provider.globDir(dir, file, depth, nil, matchesChan)
+		if len(errs) > 0 {
+			return matches, errors.New("There were errors")
+		}
+		return matches, nil
 	}
 
 	// Prevent infinite recursion. See issue 15879.
@@ -163,25 +170,26 @@ func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string)
 	}
 	var matches []string
 	for _, d := range m {
-		matches, err := provider.globDir(d, file, depth, matches, matchesChan)
-		if err != nil {
-			return matches, err
+		matches, errs := provider.globDir(d, file, depth, matches, matchesChan)
+		if len(errs) > 0 {
+			return matches, errors.New("there were errors")
 		}
 	}
 	return matches, nil
 }
 
-func (provider *Glob) globDir(dir, pattern string, depth int, matches []string, matchesChan chan<- string) ([]string, error) {
+func (provider *Glob) globDir(dir, pattern string, depth int, matches []string, matchesChan chan<- string) ([]string, []error) {
+	var errs []error
 	fi, err := os.Stat(dir)
 	if err != nil {
-		return matches, err
+		return matches, []error{err}
 	}
 	if !fi.IsDir() {
-		return matches, err
+		return matches, []error{err}
 	}
 	d, err := os.Open(dir)
 	if err != nil {
-		return matches, err
+		return matches, []error{err}
 	}
 	defer d.Close()
 
@@ -196,7 +204,8 @@ func (provider *Glob) globDir(dir, pattern string, depth int, matches []string, 
 		for _, n := range names {
 			matched, err := filepath.Match(pattern, n)
 			if err != nil {
-				return matches, err
+				errs = append(errs, err)
+				continue
 			}
 			if matched {
 				match := filepath.Join(dir, n)
@@ -207,7 +216,7 @@ func (provider *Glob) globDir(dir, pattern string, depth int, matches []string, 
 			}
 		}
 	}
-	return matches, nil
+	return matches, errs
 }
 
 // FetchDirMetadata ...
@@ -220,13 +229,13 @@ func (provider *Glob) FetchDirMetadata(updateHandler MetadataUpdateHandler) {
 		// Do not allow zero batches
 		provider.BatchSize = defaulBatchSize
 	}
-	provider.matchesChan = make(chan string, provider.BatchSize)
+	provider.fetchMatchesChan = make(chan string, provider.BatchSize)
 	go func() {
-		provider.glob(provider.Pattern, 0, provider.matchesChan)
-		close(provider.matchesChan)
+		provider.glob(provider.Pattern, 0, provider.fetchMatchesChan)
+		close(provider.fetchMatchesChan)
 	}()
 	for {
-		file, ok := <-provider.matchesChan
+		file, ok := <-provider.fetchMatchesChan
 		if !ok {
 			break
 		}
@@ -250,4 +259,5 @@ func (provider *Glob) NextFile() (string, error) {
 		return "", io.EOF
 	}
 	return file, nil
+
 }

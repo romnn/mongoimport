@@ -84,7 +84,6 @@ func main() {
 	}
 
 	i := mongoimport.Import{
-		// Allow concurrent processing of at most 2 files with 2 threads
 		Sources:    datasources,
 		Connection: conn,
 		// Global options

@@ -38,8 +38,11 @@ func (c *MongoConnection) Client() (*mongo.Client, error) {
 }
 
 func insert(collection *mongo.Collection, batch []interface{}) error {
-	_, err := collection.InsertMany(context.Background(), batch)
-	return err
+	if len(batch) > 0 {
+		_, err := collection.InsertMany(context.Background(), batch)
+		return err
+	}
+	return nil
 }
 
 func emptyCollection(collection *mongo.Collection) error {

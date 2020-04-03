@@ -171,8 +171,6 @@ github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsT
 github.com/rogpeppe/go-internal v1.1.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.2.2/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
-github.com/romnnn/configo v0.1.0 h1:lMP77t48SHy0hckvMHLZNYRMJDWmTSCK8gzacA8qJCU=
-github.com/romnnn/configo v0.1.0/go.mod h1:qeVW5OHMEK7tT8z/rSMD9phOR8pCwvp+XR86F78azlY=
 github.com/romnnn/configo v0.1.1 h1:PYghmDdwdGyBuW6/0SeBFhEoM9r5srpyGU+pD2uxN3s=
 github.com/romnnn/configo v0.1.1/go.mod h1:qeVW5OHMEK7tT8z/rSMD9phOR8pCwvp+XR86F78azlY=
 github.com/romnnn/deepequal v0.0.0-20200304153056-ea9233e420e6 h1:7v41wDR0Ntr347K9vYzBRf5T6wLUPcGdHxWoO2rPRQA=
