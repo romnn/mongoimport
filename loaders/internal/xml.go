@@ -60,8 +60,8 @@ func NewMapXMLReader(xmlReader io.Reader, conf config.XMLReaderConfig, resulsCha
 
 	var mxml MapXMLReader
 	mxml.ResulsChan = resulsChan
-	mxml.Config = conf
 	// Merge configs
+	mxml.Config = conf
 	opt.MergeConfig(&mxml.Config, config.DefaultXMLConfig)
 	go func() {
 		mxml.xmlReaderToMap(xmlReader, r)

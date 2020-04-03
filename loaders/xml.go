@@ -28,7 +28,9 @@ func (xmll *XMLLoader) Describe() string {
 // Create ...
 func (xmll XMLLoader) Create(reader io.Reader, skipSanitization bool) ImportLoader {
 	return &XMLLoader{
-		reader: reader,
+		reader:      reader,
+		resultsChan: xmll.resultsChan,
+		Config:      xmll.Config,
 	}
 }
 
