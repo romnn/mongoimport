@@ -31,32 +31,36 @@ func main() {
 	}
 	defer mongoC.Terminate(context.Background())
 
-	isCSVWalkerFunc := func(path string, info os.FileInfo, err error) bool {
-		return !info.IsDir() && filepath.Ext(path) == ".csv"
-	}
+	/*
+		isCSVWalkerFunc := func(path string, info os.FileInfo, err error) bool {
+			return !info.IsDir() && filepath.Ext(path) == ".csv"
+		}
 
-	xmlLoader := loaders.DefaultXMLLoader()
+		xmlLoader := loaders.DefaultXMLLoader()
+	*/
 	csvLoader := loaders.DefaultCSVLoader()
 	csvLoader.Excel = false
 	datasources := []*mongoimport.Datasource{
-		{
-			Description: "Ford Escort Data",
-			FileProvider: &files.List{Files: []string{
-				filepath.Join(dir, "examples/data/ford_escort.csv"),
-				filepath.Join(dir, "examples/data/ford_escort2.csv"),
-			}},
-			Options: mongoimport.Options{
-				Collection: "ford_escorts",
+		/*
+			{
+				Description: "Ford Escort Data",
+				FileProvider: &files.List{Files: []string{
+					filepath.Join(dir, "examples/data/ford_escort.csv"),
+					filepath.Join(dir, "examples/data/ford_escort2.csv"),
+				}},
+				Options: mongoimport.Options{
+					Collection: "ford_escorts",
+				},
 			},
-		},
-		{
-			FileProvider: &files.List{Files: []string{
-				filepath.Join(dir, "examples/data/hurricanes.csv"),
-			}},
-			Options: mongoimport.Options{
-				Collection: "hurricanes",
+			{
+				FileProvider: &files.List{Files: []string{
+					filepath.Join(dir, "examples/data/hurricanes.csv"),
+				}},
+				Options: mongoimport.Options{
+					Collection: "hurricanes",
+				},
 			},
-		},
+		*/
 		{
 			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
 			Options: mongoimport.Options{
@@ -64,29 +68,32 @@ func main() {
 				IndividualProgress: opt.SetFlag(false),
 			},
 		},
-		{
-			Description:  "XML Data",
-			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*.xml")},
-			Options: mongoimport.Options{
-				Collection:         "xmldata",
-				Loader:             loaders.Loader{SpecificLoader: xmlLoader},
-				IndividualProgress: opt.SetFlag(false),
+		/*
+			{
+				Description:  "XML Data",
+				FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*.xml")},
+				Options: mongoimport.Options{
+					Collection:         "xmldata",
+					Loader:             loaders.Loader{SpecificLoader: xmlLoader},
+					IndividualProgress: opt.SetFlag(false),
+				},
 			},
-		},
-		{
-			Description:  "Walk Data",
-			FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data"), Handler: isCSVWalkerFunc},
-			Options: mongoimport.Options{
-				Collection:         "walked",
-				IndividualProgress: opt.SetFlag(false),
+			{
+				Description:  "Walk Data",
+				FileProvider: &files.Walker{Directory: filepath.Join(dir, "examples/data"), Handler: isCSVWalkerFunc},
+				Options: mongoimport.Options{
+					Collection:         "walked",
+					IndividualProgress: opt.SetFlag(false),
+				},
 			},
-		},
+		*/
 	}
 
 	i := mongoimport.Import{
 		// Allow concurrent processing of at most 2 files with 2 threads
-		Sources:    datasources,
-		Connection: conn,
+		MaxParallelism: 1,
+		Sources:        datasources,
+		Connection:     conn,
 		// Global options
 		Options: mongoimport.Options{
 			IndividualProgress: opt.SetFlag(true),

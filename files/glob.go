@@ -1,6 +1,7 @@
 package files
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,13 +12,14 @@ import (
 
 // Glob ...
 type Glob struct {
-	Pattern      string
-	matchCount   int
-	BatchSize    int
-	batchIndex   int
-	matchesChan  chan string
-	file         *os.File
-	dir, pattern string
+	Pattern          string
+	matchCount       int
+	BatchSize        int
+	batchIndex       int
+	matchesChan      chan string
+	fetchMatchesChan chan string
+	file             *os.File
+	dir, pattern     string
 }
 
 // hasMeta reports whether path contains any of the magic characters
@@ -126,7 +128,18 @@ func (provider *Glob) Prepare() error {
 	}
 	provider.matchesChan = make(chan string, provider.BatchSize)
 	go func() {
-		provider.glob(provider.Pattern, 0, provider.matchesChan)
+		_, err := provider.glob(provider.Pattern, 0, provider.matchesChan)
+		if err != nil {
+			panic(err)
+		}
+		/*
+			for {
+				x, ok := <-provider.matchesChan
+				fmt.Println(ok, x)
+			}
+		*/
+		// panic(fmt.Sprintf("Channel content=%s", provider.matchesChan))
+		// panic(fmt.Sprintf("Closing with m=%s", m))
 		close(provider.matchesChan)
 	}()
 	return nil
@@ -137,6 +150,7 @@ func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string)
 		if _, err := os.Lstat(pattern); err != nil {
 			return nil, nil
 		}
+		matchesChan <- pattern
 		return []string{pattern}, nil
 	}
 
@@ -149,22 +163,27 @@ func (provider *Glob) glob(pattern string, depth int, matchesChan chan<- string)
 	}
 
 	if !hasMeta(dir[volumeLen:]) {
-		return provider.globDir(dir, file, depth, nil, matchesChan)
+		matches, err := provider.globDir(dir, file, depth, nil, matchesChan)
+		return matches, err
+		// panic(fmt.Sprintf("hasMeta m=%s", matches))
 	}
 
 	// Prevent infinite recursion. See issue 15879.
 	if dir == pattern {
+		panic(pattern)
 		return nil, filepath.ErrBadPattern
 	}
 
 	m, err := provider.glob(dir, depth+1, matchesChan)
 	if err != nil {
+		panic(dir)
 		return nil, err
 	}
 	var matches []string
 	for _, d := range m {
 		matches, err := provider.globDir(d, file, depth, matches, matchesChan)
 		if err != nil {
+			panic(file)
 			return matches, err
 		}
 	}
@@ -220,13 +239,13 @@ func (provider *Glob) FetchDirMetadata(updateHandler MetadataUpdateHandler) {
 		// Do not allow zero batches
 		provider.BatchSize = defaulBatchSize
 	}
-	provider.matchesChan = make(chan string, provider.BatchSize)
+	provider.fetchMatchesChan = make(chan string, provider.BatchSize)
 	go func() {
-		provider.glob(provider.Pattern, 0, provider.matchesChan)
-		close(provider.matchesChan)
+		provider.glob(provider.Pattern, 0, provider.fetchMatchesChan)
+		close(provider.fetchMatchesChan)
 	}()
 	for {
-		file, ok := <-provider.matchesChan
+		file, ok := <-provider.fetchMatchesChan
 		if !ok {
 			break
 		}
@@ -246,6 +265,7 @@ func (provider *Glob) FetchDirMetadata(updateHandler MetadataUpdateHandler) {
 // NextFile ...
 func (provider *Glob) NextFile() (string, error) {
 	file, ok := <-provider.matchesChan
+	fmt.Println(ok, file)
 	if !ok {
 		return "", io.EOF
 	}
