@@ -38,11 +38,14 @@ func (i *Import) produceJobs(jobChan chan ImportJob) error {
 					Collection: s.Collection,
 				}
 				if err == io.EOF {
+					panic(err)
 					// No-op (produced all files for this source)
 					break
 				} else if err != nil {
 					partialResult.Errors = append(partialResult.Errors, err)
 					s.result.PartialResults = append(s.result.PartialResults, partialResult)
+					panic(err)
+					log.Warn(err)
 				} else {
 					dbName, err := i.sourceDatabaseName(s)
 					if err != nil {
