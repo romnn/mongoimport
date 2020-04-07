@@ -88,6 +88,7 @@ func main() {
 		Connection: conn,
 		// Global options
 		Options: mongoimport.Options{
+			EmptyCollection:    opt.SetFlag(true),
 			IndividualProgress: opt.SetFlag(true),
 			Loader:             loaders.Loader{SpecificLoader: csvLoader},
 			FailOnErrors:       opt.SetFlag(false),
