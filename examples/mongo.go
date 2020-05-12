@@ -44,10 +44,11 @@ func StartMongoContainer() (testcontainers.Container, *mongoimport.MongoConnecti
 	}
 
 	return mongoC, &mongoimport.MongoConnection{
-		DatabaseName: "mock",
-		User:         user,
-		Password:     password,
-		Host:         ip,
-		Port:         port.Int(),
+		DatabaseName:     "mock",
+		AuthDatabaseName: "admin",
+		User:             user,
+		Password:         password,
+		Host:             ip,
+		Port:             port.Int(),
 	}, nil
 }

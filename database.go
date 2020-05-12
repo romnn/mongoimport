@@ -11,11 +11,12 @@ import (
 
 // MongoConnection ...
 type MongoConnection struct {
-	DatabaseName string
-	User         string
-	Password     string
-	Host         string
-	Port         int
+	DatabaseName     string
+	AuthDatabaseName string
+	User             string
+	Password         string
+	Host             string
+	Port             int
 }
 
 // Client ...
@@ -25,7 +26,7 @@ func (c *MongoConnection) Client() (*mongo.Client, error) {
 		databaseAuth = fmt.Sprintf("%s:%s@", c.User, c.Password)
 	}
 	databaseHost = fmt.Sprintf("%s:%d", c.Host, c.Port)
-	databaseConnectionURI := fmt.Sprintf("mongodb://%s%s/?connect=direct", databaseAuth, databaseHost)
+	databaseConnectionURI := fmt.Sprintf("mongodb://%s%s/%s?connect=direct", databaseAuth, databaseHost, c.AuthDatabaseName)
 	client, err := mongo.NewClient(options.Client().ApplyURI(databaseConnectionURI))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create database client: %v (%s)", err, databaseConnectionURI)

@@ -42,6 +42,13 @@ var (
 			Usage:   "mongodb database name",
 		},
 		&cli.StringFlag{
+			Name:    "auth-db-database",
+			Aliases: []string{"auth-db"},
+			Value:   "",
+			EnvVars: []string{"AUTH_DATABASE_NAME", "AUTH_DB"},
+			Usage:   "database name to be used for authentication",
+		},
+		&cli.StringFlag{
 			Name:    "db-user",
 			Aliases: []string{"u", "user"},
 			Value:   "",
