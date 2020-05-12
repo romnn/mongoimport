@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	// log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.DebugLevel)
 
 	// Get the files current directory
 	dir, err := os.Getwd()
@@ -57,6 +57,19 @@ func main() {
 				Collection: "hurricanes",
 			},
 		},
+		/*
+			{
+				Description: "JSON",
+				FileProvider: &files.List{Files: []string{
+					filepath.Join(dir, "examples/data/fruits.json"),
+					filepath.Join(dir, "examples/data/quiz.json"),
+				}},
+				Options: mongoimport.Options{
+					Collection: "jsondata",
+					Loader:     loaders.Loader{SpecificLoader: loaders.DefaultJSONLoader()},
+				},
+			},
+		*/
 		{
 			FileProvider: &files.Glob{Pattern: filepath.Join(dir, "examples/data/*/*nested*.csv")},
 			Options: mongoimport.Options{

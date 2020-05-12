@@ -153,6 +153,7 @@ func (s *Datasource) process(job ImportJob) PartialResult {
 			if err != nil {
 				log.Warn(err)
 				result.Errors = append(result.Errors, err)
+				break
 			}
 			result.Succeeded += batched
 			break

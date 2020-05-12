@@ -15,6 +15,7 @@ require (
 	github.com/romnnn/deepequal v0.0.0-20200304153056-ea9233e420e6
 	github.com/sirupsen/logrus v1.4.2
 	github.com/testcontainers/testcontainers-go v0.3.1
+	github.com/tidwall/gjson v1.6.0
 	github.com/urfave/cli/v2 v2.1.1
 	go.mongodb.org/mongo-driver v1.3.0
 	golang.org/x/crypto v0.0.0-20200311171314-f7b00557c8c4 // indirect
