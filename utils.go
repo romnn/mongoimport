@@ -43,6 +43,8 @@ func (i *Import) updateLongestDescription(description string) {
 }
 
 func (i *Import) safeLength() uint {
+	i.updateLongestDescriptionMux.Lock()
+	defer i.updateLongestDescriptionMux.Unlock()
 	maxTotal := "589.9 TB" // Hardcoding is sufficient
 	return uint(len(i.formattedProgressStatus(i.longestDescription, i.longestCollectionName, maxTotal, maxTotal)) + 5)
 }
@@ -52,6 +54,8 @@ func (i *Import) formattedProgressStatus(description string, collection string, 
 }
 
 func (i *Import) progressStatus(description *string, collection string) func(b *uiprogress.Bar) string {
+	i.updateLongestDescriptionMux.Lock()
+	defer i.updateLongestDescriptionMux.Unlock()
 	return func(b *uiprogress.Bar) string {
 		bytesDone := byteCountSI(int64(b.Current()))
 		bytesTotal := byteCountSI(int64(b.Total))

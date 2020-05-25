@@ -55,6 +55,13 @@ func (csvl *CSVLoader) Start() error {
 		return err
 	}
 	csvl.columns = columns
+	/*
+		if csvl.SkipParseHeader {
+			for i := range columns {
+				columns[i] = fmt.Sprintf("field_%d", i)
+			}
+		}
+	*/
 	return nil
 }
 
