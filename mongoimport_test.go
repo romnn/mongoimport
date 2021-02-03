@@ -1,17 +1,17 @@
 package mongoimport
 
 import (
-	"testing"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
+	"testing"
 
 	opt "github.com/romnn/configo"
 
 	"github.com/romnn/mongoimport/files"
 	"github.com/romnn/mongoimport/loaders"
-	
+
 	"context"
 
 	"github.com/docker/go-connections/nat"
@@ -100,12 +100,12 @@ func TestBasicCSVImport(t *testing.T) {
 
 	collectionName := "mock_collection"
 	csvLoader := loaders.DefaultCSVLoader()
-	csvLoader.Excel = false 
+	csvLoader.Excel = false
 	csvLoader.SkipHeader = false
 	csvLoader.Fields = "f1,f2,f3,f4,f5"
 	datasources := []*Datasource{
 		{
-			Description: "Mock Data",
+			Description:  "Mock Data",
 			FileProvider: &files.List{Files: []string{file.Name()}},
 			Options: Options{
 				Collection: collectionName,
@@ -146,7 +146,7 @@ func TestBasicCSVImport(t *testing.T) {
 	}
 	defer cur.Close(context.Background())
 	var namesFound []string
-	expected := []string{"Sally Whittaker", "Belinda Jameson","Jeff Smith","Sandy Allen"}
+	expected := []string{"Sally Whittaker", "Belinda Jameson", "Jeff Smith", "Sandy Allen"}
 	for cur.Next(context.Background()) {
 		result := map[string]string{}
 		if err := cur.Decode(&result); err != nil {
@@ -155,7 +155,7 @@ func TestBasicCSVImport(t *testing.T) {
 		}
 		namesFound = append(namesFound, strings.TrimSpace(result["f1"]))
 	}
-	
+
 	if !reflect.DeepEqual(namesFound, expected) {
 		t.Errorf("%v != %v", namesFound, expected)
 	}
