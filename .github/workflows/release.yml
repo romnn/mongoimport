@@ -1,0 +1,34 @@
+name: release
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+
+      - id: query
+        uses: romnnn/query-git-action@master
+
+      - name: Compile binaries
+        run: |
+          pip install invoke
+          go get -u github.com/mitchellh/gox
+          invoke cc
+
+      - name: Upload release binaries
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/*
+          tag: ${{ steps.query.outputs.stable_semver_version }}
+          release_name: ${{ steps.query.outputs.stable_semver_version }}
+          overwrite: true
+          file_glob: true
