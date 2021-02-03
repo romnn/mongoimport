@@ -10,7 +10,7 @@ COPY ./ /app
 
 # This removes debug information from the binary
 # Assumes go 1.10+
-RUN CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-w -s" -o app "github.com/romnnn/mongoimport/cmd/mongoimport"
+RUN CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-w -s" -o app "github.com/romnn/mongoimport/cmd/mongoimport"
 
 FROM gcr.io/distroless/static
 COPY --from=BUILD /app/app /app

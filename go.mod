@@ -1,4 +1,4 @@
-module github.com/romnnn/mongoimport
+module github.com/romnn/mongoimport
 
 go 1.13
 
@@ -11,8 +11,8 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/prometheus/common v0.9.1
-	github.com/romnnn/configo v0.1.1
-	github.com/romnnn/deepequal v0.0.0-20200304153056-ea9233e420e6
+	github.com/romnn/configo v0.1.1
+	github.com/romnn/deepequal v0.0.0-20200304153056-ea9233e420e6
 	github.com/sirupsen/logrus v1.4.2
 	github.com/testcontainers/testcontainers-go v0.3.1
 	github.com/urfave/cli/v2 v2.1.1

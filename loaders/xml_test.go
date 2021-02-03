@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	opt "github.com/romnnn/configo"
-	"github.com/romnnn/deepequal"
+	opt "github.com/romnn/configo"
+	"github.com/romnn/deepequal"
 )
 
 var (

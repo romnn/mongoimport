@@ -7,7 +7,7 @@ go:
 os:
   - linux
   - osx
-env: MOD=github.com/romnnn/mongoimport/cmd/mongoimport BINARY=mongoimport
+env: MOD=github.com/romnn/mongoimport/cmd/mongoimport BINARY=mongoimport
 jobs:
   allow_failures:
     - go: tip
@@ -29,7 +29,7 @@ jobs:
         file: build/*
         skip_cleanup: true
         on:
-          repo: romnnn/mongoimport
+          repo: romnn/mongoimport
           tags: true
 install: true
 notifications:

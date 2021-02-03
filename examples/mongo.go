@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/romnnn/mongoimport"
+	"github.com/romnn/mongoimport"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )

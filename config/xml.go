@@ -1,7 +1,7 @@
 package config
 
 import (
-	opt "github.com/romnnn/configo"
+	opt "github.com/romnn/configo"
 )
 
 // XMLReaderConfig ...

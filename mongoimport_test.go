@@ -7,10 +7,10 @@ import (
 	"reflect"
 	"strings"
 
-	opt "github.com/romnnn/configo"
+	opt "github.com/romnn/configo"
 
-	"github.com/romnnn/mongoimport/files"
-	"github.com/romnnn/mongoimport/loaders"
+	"github.com/romnn/mongoimport/files"
+	"github.com/romnn/mongoimport/loaders"
 	
 	"context"
 

@@ -14,8 +14,8 @@ from pathlib import Path
 Path().expanduser()
 yaml = YAML()
 
-CMD_PKG = "github.com/romnnn/mongoimport/cmd/mongoimport"
-PKG = "github.com/romnnn/mongoimport"
+CMD_PKG = "github.com/romnn/mongoimport/cmd/mongoimport"
+PKG = "github.com/romnn/mongoimport"
 
 ROOT_DIR = Path(__file__).parent
 BUILD_DIR = ROOT_DIR.joinpath("build")

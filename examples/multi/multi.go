@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	opt "github.com/romnnn/configo"
-	"github.com/romnnn/mongoimport"
-	"github.com/romnnn/mongoimport/examples"
-	"github.com/romnnn/mongoimport/files"
-	"github.com/romnnn/mongoimport/loaders"
+	opt "github.com/romnn/configo"
+	"github.com/romnn/mongoimport"
+	"github.com/romnn/mongoimport/examples"
+	"github.com/romnn/mongoimport/files"
+	"github.com/romnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 )
 

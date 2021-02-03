@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	opt "github.com/romnnn/configo"
-	"github.com/romnnn/mongoimport/loaders"
+	opt "github.com/romnn/configo"
+	"github.com/romnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 )

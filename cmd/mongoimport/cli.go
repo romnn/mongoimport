@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	opt "github.com/romnnn/configo"
-	"github.com/romnnn/mongoimport"
-	"github.com/romnnn/mongoimport/files"
-	"github.com/romnnn/mongoimport/validation"
+	opt "github.com/romnn/configo"
+	"github.com/romnn/mongoimport"
+	"github.com/romnn/mongoimport/files"
+	"github.com/romnn/mongoimport/validation"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

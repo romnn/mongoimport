@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	opt "github.com/romnnn/configo"
-	"github.com/romnnn/mongoimport/config"
+	opt "github.com/romnn/configo"
+	"github.com/romnn/mongoimport/config"
 )
 
 // MapXMLParseResult ...

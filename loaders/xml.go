@@ -3,8 +3,8 @@ package loaders
 import (
 	"io"
 
-	"github.com/romnnn/mongoimport/config"
-	"github.com/romnnn/mongoimport/loaders/internal"
+	"github.com/romnn/mongoimport/config"
+	"github.com/romnn/mongoimport/loaders/internal"
 )
 
 // XMLLoader ...

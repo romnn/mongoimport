@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	opt "github.com/romnnn/configo"
-	"github.com/romnnn/mongoimport"
-	"github.com/romnnn/mongoimport/config"
-	"github.com/romnnn/mongoimport/loaders"
+	opt "github.com/romnn/configo"
+	"github.com/romnn/mongoimport"
+	"github.com/romnn/mongoimport/config"
+	"github.com/romnn/mongoimport/loaders"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

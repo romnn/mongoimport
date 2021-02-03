@@ -8,7 +8,7 @@ import (
 
 	csv "github.com/JensRantil/go-csv"
 	"github.com/prometheus/common/log"
-	"github.com/romnnn/mongoimport/loaders/internal"
+	"github.com/romnn/mongoimport/loaders/internal"
 )
 
 // CSVLoader ...

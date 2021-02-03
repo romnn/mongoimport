@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/gosuri/uiprogress"
-	opt "github.com/romnnn/configo"
-	"github.com/romnnn/mongoimport/files"
+	opt "github.com/romnn/configo"
+	"github.com/romnn/mongoimport/files"
 )
 
 // Datasource ...

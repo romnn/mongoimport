@@ -1,8 +1,8 @@
 package mongoimport
 
 import (
-	opt "github.com/romnnn/configo"
-	"github.com/romnnn/mongoimport/loaders"
+	opt "github.com/romnn/configo"
+	"github.com/romnn/mongoimport/loaders"
 )
 
 // Options ...

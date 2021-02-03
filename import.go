@@ -8,7 +8,7 @@ import (
 
 	"github.com/gosuri/uiprogress"
 	"github.com/prometheus/common/log"
-	opt "github.com/romnnn/configo"
+	opt "github.com/romnn/configo"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
