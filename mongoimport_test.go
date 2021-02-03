@@ -14,9 +14,8 @@ import (
 
 	"context"
 
-	"github.com/docker/go-connections/nat"
+	tc "github.com/romnn/testcontainers/mongo"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -29,55 +28,25 @@ var (
 )
 
 func startMongoContainer() (testcontainers.Container, *MongoConnection, error) {
-	ctx := context.Background()
-	mongoPort, err := nat.NewPort("", "27017")
+	mongoC, conf, err := tc.StartMongoContainer(context.Background(), tc.ContainerOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
-	user := "root"
-	password := "example"
-	req := testcontainers.ContainerRequest{
-		Image: "mongo",
-		Env: map[string]string{
-			"MONGO_INITDB_ROOT_USERNAME": user,
-			"MONGO_INITDB_ROOT_PASSWORD": password,
-		},
-		ExposedPorts: []string{string(mongoPort)},
-		WaitingFor:   wait.ForLog("waiting for connections on port"),
-	}
-	mongoC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	ip, err := mongoC.Host(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	port, err := mongoC.MappedPort(ctx, mongoPort)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	return mongoC, &MongoConnection{
 		DatabaseName:     "mock",
 		AuthDatabaseName: "admin",
-		User:             user,
-		Password:         password,
-		Host:             ip,
-		Port:             port.Int(),
+		User:             conf.User,
+		Password:         conf.Password,
+		Host:             conf.Host,
+		Port:             conf.Port,
 	}, nil
 }
 
 // TestBasicCSVImport ...
 func TestBasicCSVImport(t *testing.T) {
-	// Start mongodb container
 	mongoC, conn, err := startMongoContainer()
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatalf("Failed to start mongoDB container: %v", err)
 	}
 	defer mongoC.Terminate(context.Background())
 

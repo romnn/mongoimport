@@ -43,7 +43,7 @@ func parseMongoClient(cliCtx *cli.Context) *mongoimport.MongoConnection {
 		User:             cliCtx.String("db-user"),
 		Password:         cliCtx.String("db-password"),
 		Host:             cliCtx.String("db-host"),
-		Port:             cliCtx.Int("db-port"),
+		Port:             cliCtx.Uint("db-port"),
 	}
 }
 

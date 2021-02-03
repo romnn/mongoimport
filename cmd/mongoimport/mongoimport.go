@@ -27,7 +27,7 @@ var (
 			EnvVars: []string{"MONGODB_HOST", "MONGO_HOST"},
 			Usage:   "mongodb database host",
 		},
-		&cli.IntFlag{
+		&cli.UintFlag{
 			Name:    "db-port",
 			Aliases: []string{"p", "port"},
 			Value:   27017,

@@ -16,7 +16,7 @@ type MongoConnection struct {
 	User             string
 	Password         string
 	Host             string
-	Port             int
+	Port             uint
 }
 
 // Client ...

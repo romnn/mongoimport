@@ -49,6 +49,6 @@ func StartMongoContainer() (testcontainers.Container, *mongoimport.MongoConnecti
 		User:             user,
 		Password:         password,
 		Host:             ip,
-		Port:             port.Int(),
+		Port:             uint(port.Int()),
 	}, nil
 }
