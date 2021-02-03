@@ -3,23 +3,19 @@ Tasks for maintaining the project.
 Execute 'invoke --list' for guidance on using Invoke
 """
 import shutil
-from ruamel.yaml import YAML
 import pprint
 import sys
 
 from invoke import task
-import webbrowser
 from pathlib import Path
 
 Path().expanduser()
-yaml = YAML()
 
 CMD_PKG = "github.com/romnn/mongoimport/cmd/mongoimport"
 PKG = "github.com/romnn/mongoimport"
 
 ROOT_DIR = Path(__file__).parent
 BUILD_DIR = ROOT_DIR.joinpath("build")
-TRAVIS_CONFIG_FILE = ROOT_DIR.joinpath(".travis.yml")
 
 
 def _delete_file(file):
