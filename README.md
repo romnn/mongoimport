@@ -1,6 +1,6 @@
 ## Mongoimport
 
-[![Build Status](https://travis-ci.com/romnn/mongoimport.svg?branch=master)](https://travis-ci.com/romnn/mongoimport)
+[![Build Status](https://github.com/romnn/mongoimport/workflows/test/badge.svg)](https://github.com/romnn/mongoimport/actions)
 ![GitHub](https://img.shields.io/github/license/romnn/mongoimport)
 [![GoDoc](https://godoc.org/github.com/romnn/mongoimport?status.svg)](https://godoc.org/github.com/romnn/mongoimport)
 [![Test Coverage](https://codecov.io/gh/romnn/mongoimport/branch/master/graph/badge.svg)](https://codecov.io/gh/romnn/mongoimport)
